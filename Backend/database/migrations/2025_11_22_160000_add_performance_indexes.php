@@ -25,6 +25,25 @@ return new class extends Migration
     }
 
     /**
+     * Safely drop an index, catching errors if index is used by foreign key
+     */
+    private function safeDropIndex(string $table, string $indexName): void
+    {
+        if (!$this->hasIndex($table, $indexName)) {
+            return;
+        }
+
+        try {
+            Schema::table($table, function (Blueprint $table) use ($indexName) {
+                $table->dropIndex($indexName);
+            });
+        } catch (\Exception $e) {
+            // Index might be used by foreign key constraint, skip dropping
+            // This is safe - the index will remain but that's okay for performance
+        }
+    }
+
+    /**
      * Run the migrations.
      * Add composite indexes for common query patterns to improve performance at scale.
      */
@@ -92,59 +111,24 @@ return new class extends Migration
     public function down(): void
     {
         // Drop posts indexes
-        if ($this->hasIndex('posts', 'posts_privacy_created_at_index')) {
-            Schema::table('posts', function (Blueprint $table) {
-                $table->dropIndex('posts_privacy_created_at_index');
-            });
-        }
-        if ($this->hasIndex('posts', 'posts_user_created_at_index')) {
-            Schema::table('posts', function (Blueprint $table) {
-                $table->dropIndex('posts_user_created_at_index');
-            });
-        }
+        $this->safeDropIndex('posts', 'posts_privacy_created_at_index');
+        $this->safeDropIndex('posts', 'posts_user_created_at_index');
 
         // Drop comments indexes
-        if ($this->hasIndex('comments', 'comments_post_parent_created_index')) {
-            Schema::table('comments', function (Blueprint $table) {
-                $table->dropIndex('comments_post_parent_created_index');
-            });
-        }
+        $this->safeDropIndex('comments', 'comments_post_parent_created_index');
 
         // Drop likes indexes
-        if ($this->hasIndex('likes', 'likes_type_id_created_index')) {
-            Schema::table('likes', function (Blueprint $table) {
-                $table->dropIndex('likes_type_id_created_index');
-            });
-        }
-        if ($this->hasIndex('likes', 'likes_user_type_reaction_index')) {
-            Schema::table('likes', function (Blueprint $table) {
-                $table->dropIndex('likes_user_type_reaction_index');
-            });
-        }
+        $this->safeDropIndex('likes', 'likes_type_id_created_index');
+        $this->safeDropIndex('likes', 'likes_user_type_reaction_index');
 
         // Drop friend_requests indexes
-        if ($this->hasIndex('friend_requests', 'friend_requests_receiver_status_index')) {
-            Schema::table('friend_requests', function (Blueprint $table) {
-                $table->dropIndex('friend_requests_receiver_status_index');
-            });
-        }
-        if ($this->hasIndex('friend_requests', 'friend_requests_sender_status_index')) {
-            Schema::table('friend_requests', function (Blueprint $table) {
-                $table->dropIndex('friend_requests_sender_status_index');
-            });
-        }
+        // Note: These indexes may be used by foreign key constraints, so we use safeDropIndex
+        $this->safeDropIndex('friend_requests', 'friend_requests_receiver_status_index');
+        $this->safeDropIndex('friend_requests', 'friend_requests_sender_status_index');
 
         // Drop friends indexes
-        if ($this->hasIndex('friends', 'friends_user_created_index')) {
-            Schema::table('friends', function (Blueprint $table) {
-                $table->dropIndex('friends_user_created_index');
-            });
-        }
-        if ($this->hasIndex('friends', 'friends_friend_created_index')) {
-            Schema::table('friends', function (Blueprint $table) {
-                $table->dropIndex('friends_friend_created_index');
-            });
-        }
+        $this->safeDropIndex('friends', 'friends_user_created_index');
+        $this->safeDropIndex('friends', 'friends_friend_created_index');
     }
 };
 
