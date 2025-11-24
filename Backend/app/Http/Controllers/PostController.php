@@ -201,7 +201,7 @@ class PostController extends Controller
         $post->likes_count = \App\Models\Like::where('likeable_type', Post::class)
             ->where('likeable_id', $post->id)
             ->count();
-
+$post->append('image_url');
         return response()->json([
             'message' => 'Post created successfully',
             'post' => $post,
@@ -312,7 +312,12 @@ class PostController extends Controller
             return $comment;
         });
 
-        return response()->json($post);
+       
+$post->append('image_url');
+
+return response()->json($post);
+
+
     }
 
     /**
@@ -468,6 +473,7 @@ class PostController extends Controller
             });
         
         $post->reactions = $postReactions;
+$post->append('image_url');
 
         return response()->json([
             'message' => 'Post updated successfully',
@@ -495,4 +501,15 @@ class PostController extends Controller
 
         return response()->json(['message' => 'Post deleted successfully']);
     }
+public function getImageUrlAttribute()
+{
+    if (!$this->image) {
+        return null;
+    }
+
+    return url('storage/' . $this->image); 
+}
+
+
+
 }

@@ -1,37 +1,18 @@
 <?php
 
-return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Cross-Origin Resource Sharing (CORS) Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Here you may configure your settings for cross-origin resource sharing
-    | or "CORS". This determines what cross-origin operations may execute
-    | in web browsers. You are free to adjust these settings as needed.
-    |
-    | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-    |
-    */
+    return [
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'storage/*'],
 
     'allowed_methods' => ['*'],
 
-    // For development: allow localhost in any format
     'allowed_origins' => [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:3000',
-        env('FRONTEND_URL', 'http://localhost:5173'),
+        'https://airoxdev.com',
+        'https://www.airoxdev.com',
     ],
 
-    // Pattern matching for localhost (any port)
-    'allowed_origins_patterns' => [
-        '#^http://(localhost|127\.0\.0\.1):[0-9]+$#',
-    ],
+    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 
@@ -39,6 +20,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true, // Enable credentials for Sanctum
-
+    'supports_credentials' => true,  // IMPORTANT FOR TOKEN API
 ];
+
