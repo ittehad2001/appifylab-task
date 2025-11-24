@@ -91,29 +91,60 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('posts', function (Blueprint $table) {
-            $table->dropIndex('posts_privacy_created_at_index');
-            $table->dropIndex('posts_user_created_at_index');
-        });
+        // Drop posts indexes
+        if ($this->hasIndex('posts', 'posts_privacy_created_at_index')) {
+            Schema::table('posts', function (Blueprint $table) {
+                $table->dropIndex('posts_privacy_created_at_index');
+            });
+        }
+        if ($this->hasIndex('posts', 'posts_user_created_at_index')) {
+            Schema::table('posts', function (Blueprint $table) {
+                $table->dropIndex('posts_user_created_at_index');
+            });
+        }
 
-        Schema::table('comments', function (Blueprint $table) {
-            $table->dropIndex('comments_post_parent_created_index');
-        });
+        // Drop comments indexes
+        if ($this->hasIndex('comments', 'comments_post_parent_created_index')) {
+            Schema::table('comments', function (Blueprint $table) {
+                $table->dropIndex('comments_post_parent_created_index');
+            });
+        }
 
-        Schema::table('likes', function (Blueprint $table) {
-            $table->dropIndex('likes_type_id_created_index');
-            $table->dropIndex('likes_user_type_reaction_index');
-        });
+        // Drop likes indexes
+        if ($this->hasIndex('likes', 'likes_type_id_created_index')) {
+            Schema::table('likes', function (Blueprint $table) {
+                $table->dropIndex('likes_type_id_created_index');
+            });
+        }
+        if ($this->hasIndex('likes', 'likes_user_type_reaction_index')) {
+            Schema::table('likes', function (Blueprint $table) {
+                $table->dropIndex('likes_user_type_reaction_index');
+            });
+        }
 
-        Schema::table('friend_requests', function (Blueprint $table) {
-            $table->dropIndex('friend_requests_receiver_status_index');
-            $table->dropIndex('friend_requests_sender_status_index');
-        });
+        // Drop friend_requests indexes
+        if ($this->hasIndex('friend_requests', 'friend_requests_receiver_status_index')) {
+            Schema::table('friend_requests', function (Blueprint $table) {
+                $table->dropIndex('friend_requests_receiver_status_index');
+            });
+        }
+        if ($this->hasIndex('friend_requests', 'friend_requests_sender_status_index')) {
+            Schema::table('friend_requests', function (Blueprint $table) {
+                $table->dropIndex('friend_requests_sender_status_index');
+            });
+        }
 
-        Schema::table('friends', function (Blueprint $table) {
-            $table->dropIndex('friends_user_created_index');
-            $table->dropIndex('friends_friend_created_index');
-        });
+        // Drop friends indexes
+        if ($this->hasIndex('friends', 'friends_user_created_index')) {
+            Schema::table('friends', function (Blueprint $table) {
+                $table->dropIndex('friends_user_created_index');
+            });
+        }
+        if ($this->hasIndex('friends', 'friends_friend_created_index')) {
+            Schema::table('friends', function (Blueprint $table) {
+                $table->dropIndex('friends_friend_created_index');
+            });
+        }
     }
 };
 
