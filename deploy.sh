@@ -59,3 +59,8 @@ sudo systemctl reload nginx
 echo -e "${GREEN}✅ Deployment completed successfully!${NC}"
 echo -e "${GREEN}Your application should now be updated.${NC}"
 
+
+
+
+
+
