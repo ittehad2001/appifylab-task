@@ -84,25 +84,29 @@ export const getPosts = async (page: number = 1): Promise<{ data: Post[]; curren
 // Create a new post
 export const createPost = async (data: CreatePostData): Promise<{ message: string; post: Post }> => {
   const formData = new FormData();
-  
+
   if (data.content) {
     formData.append('content', data.content);
   }
-  
+
   if (data.image) {
-    formData.append('image', data.image);
+    formData.append('image', data.image); // File object
   }
-  
+
   formData.append('privacy', data.privacy);
-  
+
   const response = await apiClient.post('/posts', formData, {
+    withCredentials: false, // REQUIRED FOR COOKIE
     headers: {
-      'Content-Type': 'multipart/form-data',
+      Accept: 'application/json',
+      // DO NOT SET Content-Type (Axios will set it automatically)
     },
   });
-  
+
   return response.data;
 };
+
+
 
 // Get a single post
 export const getPost = async (id: number): Promise<Post> => {

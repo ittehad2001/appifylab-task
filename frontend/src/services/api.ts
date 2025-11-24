@@ -9,7 +9,7 @@ const apiClient: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  withCredentials: true, // Important for Laravel Sanctum
+  withCredentials: false, // Important for Laravel Sanctum
 });
 
 // Request interceptor - Add auth token if available

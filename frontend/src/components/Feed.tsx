@@ -756,41 +756,33 @@ function Feed({ onLogout }: FeedProps) {
 
   // Get image URL
   const getImageUrl = (imagePath: string | null, imageUrl?: string | null): string | undefined => {
-    // Prefer image_url if provided (from backend accessor)
-    if (imageUrl) {
-      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-        return imageUrl;
-      }
-      // If it's a relative path (starts with /storage/), construct full URL
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-      const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-      // Ensure imageUrl starts with /
-      const path = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-      return `${baseUrl}${path}`;
-    }
-    
-    // Fallback to image path
-    if (!imagePath) return undefined;
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      return imagePath;
-    }
-    
-    // Get base URL (remove /api if present)
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-    const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-    
-    // Handle different path formats
-    let cleanPath = imagePath;
-    if (cleanPath.startsWith('public/')) {
-      cleanPath = cleanPath.replace('public/', '');
-    }
-    if (cleanPath.startsWith('storage/')) {
-      cleanPath = cleanPath.replace('storage/', '');
-    }
-    
-    // Construct full URL - Laravel storage link points to storage/app/public
-    return `${baseUrl}/storage/${cleanPath}`;
-  };
+  if (!imagePath && !imageUrl) return undefined;
+
+  // Always use backend domain for images
+  const BASE = "https://api.airoxdev.com";
+
+  // If backend gives full URL
+  if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
+    return imageUrl;
+  }
+
+  // If backend gives "/storage/xxxx.jpg"
+  if (imageUrl && imageUrl.startsWith("/")) {
+    return BASE + imageUrl;
+  }
+
+  // Handle "posts/xxxx.jpg"
+  if (imagePath) {
+    let clean = imagePath.replace("public/", "").replace("storage/", "");
+
+    return `${BASE}/storage/${clean}`;
+  }
+
+  return undefined;
+};
+
+
+
 
   // Handle post image load error
   const handlePostImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -1570,24 +1562,31 @@ function Feed({ onLogout }: FeedProps) {
                     {/* Post Creation Area */}
                     <div className="_feed_inner_text_area _b_radious6 _padd_b24 _padd_t24 _padd_r24 _padd_l24 _mar_b16">
                       <div className="_feed_inner_text_area_box">
-                        <div className="_feed_inner_text_area_box_image">
-                          <img 
-                            src={(() => {
-                              if (!currentUser?.profile_image_url) return getDefaultProfileImage();
-                              let imageUrl = currentUser.profile_image_url;
-                              // If URL is relative, make it absolute
-                              if (imageUrl.startsWith('/storage/')) {
-                                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                imageUrl = `${baseUrl}${imageUrl}`;
-                              }
-                              return imageUrl;
-                            })()} 
-                            alt="Profile" 
-                            className="_txt_img"
-                            onError={handleImageError}
-                          />
-                        </div>
+                        <div className="_feed_inner_text_area_box_image">                                                         
+  <img
+    src={(() => {
+      if (!currentUser?.profile_image_url) return getDefaultProfileImage();
+      let imageUrl = currentUser.profile_image_url;
+
+      // If URL is relative, make it absolute
+      if (imageUrl.startsWith('/storage/')) {                                                                   
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+        const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
+        imageUrl = `${baseUrl}${imageUrl}`;
+      }
+      return imageUrl;
+    })()}
+    alt="Profile"
+    className="_txt_img"
+    onError={handleImageError}
+  />
+</div>
+ 
+                            
+               
+
+
+
                         <div className="form-floating _feed_inner_text_area_box_form" style={{ position: 'relative' }}>
                           <textarea 
                             className={`form-control _textarea ${!postContent ? '_textarea_empty' : ''}`}

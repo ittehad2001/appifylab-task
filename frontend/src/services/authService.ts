@@ -31,19 +31,16 @@ export interface AuthResponse {
 // Login user
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   const response = await apiClient.post<AuthResponse>('/login', credentials);
-  
-  // Store token in localStorage
-  if (response.data.access_token) {
-    localStorage.setItem('auth_token', response.data.access_token);
-  }
-  
-  // Store user data in localStorage for instant display
-  if (response.data.user) {
-    localStorage.setItem('user_data', JSON.stringify(response.data.user));
-  }
-  
+
+  const token = response.data.access_token;
+  localStorage.setItem('auth_token', token);
+
   return response.data;
 };
+
+
+
+
 
 // Register new user
 export const register = async (data: RegisterData): Promise<AuthResponse> => {
