@@ -3,9 +3,27 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    /**
+     * Check if an index exists on a table
+     */
+    private function hasIndex(string $table, string $indexName): bool
+    {
+        $connection = DB::connection();
+        $databaseName = $connection->getDatabaseName();
+        
+        $result = $connection->selectOne(
+            "SELECT COUNT(*) as count FROM information_schema.statistics 
+             WHERE table_schema = ? AND table_name = ? AND index_name = ?",
+            [$databaseName, $table, $indexName]
+        );
+        
+        return $result->count > 0;
+    }
+
     /**
      * Run the migrations.
      * Add composite indexes for common query patterns to improve performance at scale.
@@ -13,33 +31,59 @@ return new class extends Migration
     public function up(): void
     {
         // Posts table - composite index for privacy + created_at (most common query)
-        Schema::table('posts', function (Blueprint $table) {
-            $table->index(['privacy', 'created_at'], 'posts_privacy_created_at_index');
-            $table->index(['user_id', 'created_at'], 'posts_user_created_at_index');
-        });
+        if (!$this->hasIndex('posts', 'posts_privacy_created_at_index')) {
+            Schema::table('posts', function (Blueprint $table) {
+                $table->index(['privacy', 'created_at'], 'posts_privacy_created_at_index');
+            });
+        }
+        if (!$this->hasIndex('posts', 'posts_user_created_at_index')) {
+            Schema::table('posts', function (Blueprint $table) {
+                $table->index(['user_id', 'created_at'], 'posts_user_created_at_index');
+            });
+        }
 
         // Comments table - composite indexes for post queries
-        Schema::table('comments', function (Blueprint $table) {
-            $table->index(['post_id', 'parent_id', 'created_at'], 'comments_post_parent_created_index');
-        });
+        if (!$this->hasIndex('comments', 'comments_post_parent_created_index')) {
+            Schema::table('comments', function (Blueprint $table) {
+                $table->index(['post_id', 'parent_id', 'created_at'], 'comments_post_parent_created_index');
+            });
+        }
 
         // Likes table - optimize polymorphic queries
-        Schema::table('likes', function (Blueprint $table) {
-            $table->index(['likeable_type', 'likeable_id', 'created_at'], 'likes_type_id_created_index');
-            $table->index(['user_id', 'likeable_type', 'reaction_type'], 'likes_user_type_reaction_index');
-        });
+        if (!$this->hasIndex('likes', 'likes_type_id_created_index')) {
+            Schema::table('likes', function (Blueprint $table) {
+                $table->index(['likeable_type', 'likeable_id', 'created_at'], 'likes_type_id_created_index');
+            });
+        }
+        if (!$this->hasIndex('likes', 'likes_user_type_reaction_index')) {
+            Schema::table('likes', function (Blueprint $table) {
+                $table->index(['user_id', 'likeable_type', 'reaction_type'], 'likes_user_type_reaction_index');
+            });
+        }
 
         // Friend requests - optimize status queries
-        Schema::table('friend_requests', function (Blueprint $table) {
-            $table->index(['receiver_id', 'status', 'created_at'], 'friend_requests_receiver_status_index');
-            $table->index(['sender_id', 'status'], 'friend_requests_sender_status_index');
-        });
+        if (!$this->hasIndex('friend_requests', 'friend_requests_receiver_status_index')) {
+            Schema::table('friend_requests', function (Blueprint $table) {
+                $table->index(['receiver_id', 'status', 'created_at'], 'friend_requests_receiver_status_index');
+            });
+        }
+        if (!$this->hasIndex('friend_requests', 'friend_requests_sender_status_index')) {
+            Schema::table('friend_requests', function (Blueprint $table) {
+                $table->index(['sender_id', 'status'], 'friend_requests_sender_status_index');
+            });
+        }
 
         // Friends table - optimize friend lookups
-        Schema::table('friends', function (Blueprint $table) {
-            $table->index(['user_id', 'created_at'], 'friends_user_created_index');
-            $table->index(['friend_id', 'created_at'], 'friends_friend_created_index');
-        });
+        if (!$this->hasIndex('friends', 'friends_user_created_index')) {
+            Schema::table('friends', function (Blueprint $table) {
+                $table->index(['user_id', 'created_at'], 'friends_user_created_index');
+            });
+        }
+        if (!$this->hasIndex('friends', 'friends_friend_created_index')) {
+            Schema::table('friends', function (Blueprint $table) {
+                $table->index(['friend_id', 'created_at'], 'friends_friend_created_index');
+            });
+        }
     }
 
     /**
