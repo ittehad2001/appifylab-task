@@ -27,11 +27,11 @@ class ProfileController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'profile_image' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp|max:5120', // Increased max size to 5MB, added webp
+            'profile_image' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp|max:51200', // 50MB max size, added webp
         ], [
             'profile_image.file' => 'The profile image must be a file.',
             'profile_image.mimes' => 'The profile image must be a file of type: jpeg, jpg, png, gif, or webp.',
-            'profile_image.max' => 'The profile image may not be greater than 5MB.',
+            'profile_image.max' => 'The profile image may not be greater than 50MB.',
         ]);
 
         // Combine first_name and last_name into name
