@@ -91,10 +91,6 @@ function Profile({ onBack, onUpdate }: ProfileProps) {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setError('Image size should be less than 2MB');
-        return;
-      }
       if (!file.type.startsWith('image/')) {
         setError('Please select a valid image file');
         return;
@@ -303,7 +299,7 @@ function Profile({ onBack, onUpdate }: ProfileProps) {
     }
 
     try {
-      const response = await apiClient.put('/profile/password', passwordData);
+      await apiClient.put('/profile/password', passwordData);
       setSuccess('Password updated successfully!');
       setPasswordData({
         current_password: '',
@@ -412,7 +408,7 @@ function Profile({ onBack, onUpdate }: ProfileProps) {
                 <div className="_profile_avatar_wrapper">
                   {hasCustomImage() ? (
                     <img 
-                      src={profileImage} 
+                      src={profileImage ?? undefined} 
                       alt="Profile" 
                       className="_profile_avatar_image"
                       onError={handleImageError}
