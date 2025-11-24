@@ -754,32 +754,132 @@ function Feed({ onLogout }: FeedProps) {
     return `${Math.floor(diffInSeconds / 86400)} day${Math.floor(diffInSeconds / 86400) !== 1 ? 's' : ''} ago`;
   };
 
-  // Get image URL
+  // Get base URL helper - handles both development and production
+  const getBaseUrl = (): string => {
+    try {
+      // Check if window is available (client-side)
+      if (typeof window === 'undefined') {
+        // Fallback for SSR or initial render - check if we're in production build
+        if (import.meta.env.PROD) {
+          return 'https://api.airoxdev.com';
+        }
+        return 'http://localhost:8000';
+      }
+      
+      // Detect production environment based on hostname and build mode
+      const hostname = window.location?.hostname || 'localhost';
+      const isLocalhost = hostname === 'localhost' || 
+                         hostname === '127.0.0.1' ||
+                         hostname.includes('localhost') ||
+                         hostname.includes('127.0.0.1');
+      
+      // Check if we're in production build mode
+      const isProductionBuild = import.meta.env.PROD;
+      
+      // In production (not localhost OR production build), always use production API URL
+      if (!isLocalhost || isProductionBuild) {
+        // Double check: if hostname is airoxdev.com or similar production domain, use production API
+        if (hostname.includes('airoxdev.com') || hostname.includes('www.airoxdev.com')) {
+          return 'https://api.airoxdev.com';
+        }
+        // If it's a production build but running on localhost (testing), still use production API
+        if (isProductionBuild) {
+          return 'https://api.airoxdev.com';
+        }
+        // If not localhost and not production domain, assume production
+        if (!isLocalhost) {
+          return 'https://api.airoxdev.com';
+        }
+      }
+      
+      // In development (localhost), use environment variable or default to localhost
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+      let baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
+      
+      // Ensure we have a valid base URL
+      if (!baseUrl || baseUrl === '') {
+        baseUrl = 'http://localhost:8000';
+      }
+      
+      return baseUrl;
+    } catch (error) {
+      // Fallback: if in production build, use production API, otherwise localhost
+      if (import.meta.env.PROD) {
+        return 'https://api.airoxdev.com';
+      }
+      console.warn('Error determining base URL, using localhost fallback:', error);
+      return 'http://localhost:8000';
+    }
+  };
+
+  // Get image URL for posts
   const getImageUrl = (imagePath: string | null, imageUrl?: string | null): string | undefined => {
-  if (!imagePath && !imageUrl) return undefined;
+    if (!imagePath && !imageUrl) return undefined;
 
-  // Always use backend domain for images
-  const BASE = "https://api.airoxdev.com";
+    const baseUrl = getBaseUrl();
 
-  // If backend gives full URL
-  if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
-    return imageUrl;
-  }
+    // If backend gives full URL
+    if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
+      return imageUrl;
+    }
 
-  // If backend gives "/storage/xxxx.jpg"
-  if (imageUrl && imageUrl.startsWith("/")) {
-    return BASE + imageUrl;
-  }
+    // If backend gives "/storage/xxxx.jpg"
+    if (imageUrl && imageUrl.startsWith("/")) {
+      return `${baseUrl}${imageUrl}`;
+    }
 
-  // Handle "posts/xxxx.jpg"
-  if (imagePath) {
-    let clean = imagePath.replace("public/", "").replace("storage/", "");
+    // Handle "posts/xxxx.jpg" or relative paths
+    if (imagePath) {
+      let clean = imagePath.replace("public/", "").replace("storage/", "");
+      // Ensure clean path starts with / if it doesn't
+      if (!clean.startsWith("/")) {
+        clean = `/${clean}`;
+      }
+      return `${baseUrl}/storage${clean}`;
+    }
 
-    return `${BASE}/storage/${clean}`;
-  }
+    return undefined;
+  };
 
-  return undefined;
-};
+  // Get profile image URL - handles all URL formats
+  const getProfileImageUrl = (profileImageUrl: string | null | undefined): string => {
+    // Return default if no URL provided
+    if (!profileImageUrl || (typeof profileImageUrl === 'string' && profileImageUrl.trim() === '')) {
+      return getDefaultProfileImage();
+    }
+
+    // Ensure it's a string
+    const imageUrl = String(profileImageUrl).trim();
+
+    // If already a full URL (http/https), use it as-is
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+
+    const baseUrl = getBaseUrl();
+
+    // Handle "/storage/..." paths
+    if (imageUrl.startsWith('/storage/')) {
+      return `${baseUrl}${imageUrl}`;
+    }
+
+    // Handle other paths starting with "/"
+    if (imageUrl.startsWith('/')) {
+      // If it starts with / but not /storage/, assume it's a storage path
+      if (!imageUrl.startsWith('/storage')) {
+        return `${baseUrl}/storage${imageUrl}`;
+      }
+      return `${baseUrl}${imageUrl}`;
+    }
+
+    // Handle paths like "profiles/xxx.jpg" or "storage/profiles/xxx.jpg"
+    let cleanPath = imageUrl.replace('public/', '').replace('storage/', '');
+    if (!cleanPath.startsWith('/')) {
+      cleanPath = `/${cleanPath}`;
+    }
+    
+    return `${baseUrl}/storage${cleanPath}`;
+  };
 
 
 
@@ -787,16 +887,12 @@ function Feed({ onLogout }: FeedProps) {
   // Handle post image load error
   const handlePostImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.target as HTMLImageElement;
-    // Hide broken image
-    target.style.display = 'none';
-    // Optionally show a placeholder
-    const parent = target.parentElement;
-    if (parent && !parent.querySelector('.image-placeholder')) {
-      const placeholder = document.createElement('div');
-      placeholder.className = 'image-placeholder';
-      placeholder.style.cssText = 'padding: 40px; text-align: center; color: #999; background: #f5f5f5; border-radius: 8px;';
-      placeholder.textContent = 'Image not available';
-      parent.appendChild(placeholder);
+    // Simply hide the broken image and its container
+    // Don't show "Image not available" placeholder
+    if (target.parentElement) {
+      target.parentElement.style.display = 'none';
+    } else {
+      target.style.display = 'none';
     }
   };
 
@@ -1027,7 +1123,7 @@ function Feed({ onLogout }: FeedProps) {
                             <div key={request.id} className="_friend_request_item">
                               <div className="_friend_request_user">
                                 <img 
-                                  src={request.sender.profile_image_url || getDefaultProfileImage()} 
+                                  src={getProfileImageUrl(request.sender.profile_image_url)} 
                                   alt={request.sender.name} 
                                   className="_friend_request_avatar"
                                   onError={handleImageError}
@@ -1074,17 +1170,7 @@ function Feed({ onLogout }: FeedProps) {
               <div className="_header_nav_profile">
                 <div className="_header_nav_profile_image">
                   <img 
-                    src={(() => {
-                      if (!currentUser?.profile_image_url) return getDefaultProfileImage();
-                      let imageUrl = currentUser.profile_image_url;
-                      // If URL is relative, make it absolute
-                      if (imageUrl.startsWith('/storage/')) {
-                        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                        const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                        imageUrl = `${baseUrl}${imageUrl}`;
-                      }
-                      return imageUrl;
-                    })()} 
+                    src={getProfileImageUrl(currentUser?.profile_image_url)} 
                     alt="Profile" 
                     className="_nav_profile_img"
                     onError={handleImageError}
@@ -1285,16 +1371,7 @@ function Feed({ onLogout }: FeedProps) {
                               <div className="_left_inner_area_suggest_info_image">
                                 <a href="#0">
                                   <img 
-                                    src={(() => {
-                                      if (!person.profile_image_url) return getDefaultProfileImage();
-                                      let imageUrl = person.profile_image_url;
-                                      if (imageUrl.startsWith('/storage/')) {
-                                        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                        const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                        imageUrl = `${baseUrl}${imageUrl}`;
-                                      }
-                                      return imageUrl;
-                                    })()}
+                                    src={getProfileImageUrl(person.profile_image_url)}
                                     alt={person.name} 
                                     className="_info_img" 
                                     onError={handleImageError}
@@ -1564,18 +1641,7 @@ function Feed({ onLogout }: FeedProps) {
                       <div className="_feed_inner_text_area_box">
                         <div className="_feed_inner_text_area_box_image">                                                         
   <img
-    src={(() => {
-      if (!currentUser?.profile_image_url) return getDefaultProfileImage();
-      let imageUrl = currentUser.profile_image_url;
-
-      // If URL is relative, make it absolute
-      if (imageUrl.startsWith('/storage/')) {                                                                   
-        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-        const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-        imageUrl = `${baseUrl}${imageUrl}`;
-      }
-      return imageUrl;
-    })()}
+    src={getProfileImageUrl(currentUser?.profile_image_url)}
     alt="Profile"
     className="_txt_img"
     onError={handleImageError}
@@ -1776,18 +1842,7 @@ function Feed({ onLogout }: FeedProps) {
                           <div className="_feed_inner_timeline_post_box">
                             <div className="_feed_inner_timeline_post_box_image">
                               <img 
-                                src={(() => {
-                                  const profileImageUrl = (post.user as any).profile_image_url;
-                                  if (!profileImageUrl) return getDefaultProfileImage();
-                                  let imageUrl = profileImageUrl;
-                                  // If URL is relative, make it absolute
-                                  if (imageUrl.startsWith('/storage/')) {
-                                    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                    const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                    imageUrl = `${baseUrl}${imageUrl}`;
-                                  }
-                                  return imageUrl;
-                                })()} 
+                                src={getProfileImageUrl((post.user as any).profile_image_url)} 
                                 alt={post.user.name} 
                                 className="_post_img"
                                 onError={handleImageError}
@@ -1948,18 +2003,7 @@ function Feed({ onLogout }: FeedProps) {
                                 {post.likes.slice(0, 5).map((like, index) => (
                                   <img 
                                     key={like.id}
-                                    src={(() => {
-                                      const profileImageUrl = (like.user as any).profile_image_url;
-                                      if (!profileImageUrl) return getDefaultProfileImage();
-                                      let imageUrl = profileImageUrl;
-                                      // If URL is relative, make it absolute
-                                      if (imageUrl.startsWith('/storage/')) {
-                                        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                        const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                        imageUrl = `${baseUrl}${imageUrl}`;
-                                      }
-                                      return imageUrl;
-                                    })()} 
+                                    src={getProfileImageUrl((like.user as any).profile_image_url)} 
                                     alt={like.user.name} 
                                     className={index === 0 ? "_react_img1" : index < 3 ? "_react_img" : "_react_img _rect_img_mbl_none"}
                                     onError={handleImageError}
@@ -2231,17 +2275,7 @@ function Feed({ onLogout }: FeedProps) {
                             <div className="_feed_inner_comment_box_content">
                               <div className="_feed_inner_comment_box_content_image">
                                 <img 
-                                  src={(() => {
-                                    if (!currentUser?.profile_image_url) return getDefaultProfileImage();
-                                    let imageUrl = currentUser.profile_image_url;
-                                    // If URL is relative, make it absolute
-                                    if (imageUrl.startsWith('/storage/')) {
-                                      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                      const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                      imageUrl = `${baseUrl}${imageUrl}`;
-                                    }
-                                    return imageUrl;
-                                  })()} 
+                                  src={getProfileImageUrl(currentUser?.profile_image_url)} 
                                   alt="Comment" 
                                   className="_comment_img"
                                   onError={handleImageError}
@@ -2316,18 +2350,7 @@ function Feed({ onLogout }: FeedProps) {
                                     <div className="_comment_image">
                                       <a href="#0" className="_comment_image_link">
                                         <img 
-                                          src={(() => {
-                                            const profileImageUrl = (comment.user as any).profile_image_url;
-                                            if (!profileImageUrl) return getDefaultProfileImage();
-                                            let imageUrl = profileImageUrl;
-                                            // If URL is relative, make it absolute
-                                            if (imageUrl.startsWith('/storage/')) {
-                                              const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                              const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                              imageUrl = `${baseUrl}${imageUrl}`;
-                                            }
-                                            return imageUrl;
-                                          })()} 
+                                          src={getProfileImageUrl((comment.user as any).profile_image_url)} 
                                           alt={comment.user.name} 
                                           className="_comment_img1"
                                           onError={handleImageError}
@@ -2555,17 +2578,7 @@ function Feed({ onLogout }: FeedProps) {
                                             <div className="_feed_inner_comment_box_content">
                                               <div className="_feed_inner_comment_box_content_image">
                                                 <img 
-                                                  src={(() => {
-                                                    if (!currentUser?.profile_image_url) return getDefaultProfileImage();
-                                                    let imageUrl = currentUser.profile_image_url;
-                                                    // If URL is relative, make it absolute
-                                                    if (imageUrl.startsWith('/storage/')) {
-                                                      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                                      const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                                      imageUrl = `${baseUrl}${imageUrl}`;
-                                                    }
-                                                    return imageUrl;
-                                                  })()} 
+                                                  src={getProfileImageUrl(currentUser?.profile_image_url)} 
                                                   alt="Comment" 
                                                   className="_comment_img"
                                                   onError={handleImageError}
@@ -2624,18 +2637,7 @@ function Feed({ onLogout }: FeedProps) {
                                               <div className="_comment_main">
                                                 <div className="_comment_image">
                                                   <img 
-                                                    src={(() => {
-                                                      const profileImageUrl = (reply.user as any).profile_image_url;
-                                                      if (!profileImageUrl) return getDefaultProfileImage();
-                                                      let imageUrl = profileImageUrl;
-                                                      // If URL is relative, make it absolute
-                                                      if (imageUrl.startsWith('/storage/')) {
-                                                        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                                        const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                                        imageUrl = `${baseUrl}${imageUrl}`;
-                                                      }
-                                                      return imageUrl;
-                                                    })()} 
+                                                    src={getProfileImageUrl((reply.user as any).profile_image_url)} 
                                                     alt={reply.user.name} 
                                                     className="_comment_img1"
                                                     onError={handleImageError}
@@ -2860,17 +2862,7 @@ function Feed({ onLogout }: FeedProps) {
                                                         <div className="_feed_inner_comment_box_content">
                                                           <div className="_feed_inner_comment_box_content_image">
                                                             <img 
-                                                              src={(() => {
-                                                                if (!currentUser?.profile_image_url) return getDefaultProfileImage();
-                                                                let imageUrl = currentUser.profile_image_url;
-                                                                // If URL is relative, make it absolute
-                                                                if (imageUrl.startsWith('/storage/')) {
-                                                                  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                                                  const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                                                  imageUrl = `${baseUrl}${imageUrl}`;
-                                                                }
-                                                                return imageUrl;
-                                                              })()} 
+                                                              src={getProfileImageUrl(currentUser?.profile_image_url)} 
                                                               alt="Reply" 
                                                               className="_comment_img"
                                                               onError={handleImageError}
@@ -3023,16 +3015,7 @@ function Feed({ onLogout }: FeedProps) {
                                 <div className="_feed_right_inner_area_card_ppl_image">
                                   <a href="#0">
                                     <img 
-                                      src={(() => {
-                                        if (!friend.profile_image_url) return getDefaultProfileImage();
-                                        let imageUrl = friend.profile_image_url;
-                                        if (imageUrl.startsWith('/storage/')) {
-                                          const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                                          const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                                          imageUrl = `${baseUrl}${imageUrl}`;
-                                        }
-                                        return imageUrl;
-                                      })()}
+                                      src={getProfileImageUrl(friend.profile_image_url)}
                                       alt={friend.name} 
                                       className="_box_ppl_img" 
                                       onError={handleImageError}
@@ -3540,17 +3523,7 @@ function Feed({ onLogout }: FeedProps) {
                       {/* Profile Image */}
                       <div style={{ marginRight: '12px' }}>
                         <img
-                          src={(() => {
-                            const profileImageUrl = (like.user as any).profile_image_url;
-                            if (!profileImageUrl) return getDefaultProfileImage();
-                            let imageUrl = profileImageUrl;
-                            if (imageUrl.startsWith('/storage/')) {
-                              const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                              const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                              imageUrl = `${baseUrl}${imageUrl}`;
-                            }
-                            return imageUrl;
-                          })()}
+                          src={getProfileImageUrl((like.user as any).profile_image_url)}
                           alt={like.user.name}
                           style={{
                             width: '40px',
@@ -3727,16 +3700,7 @@ function Feed({ onLogout }: FeedProps) {
                     {/* Profile Image */}
                     <div style={{ marginRight: '12px' }}>
                       <img
-                        src={(() => {
-                          if (!person.profile_image_url) return getDefaultProfileImage();
-                          let imageUrl = person.profile_image_url;
-                          if (imageUrl.startsWith('/storage/')) {
-                            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                            const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                            imageUrl = `${baseUrl}${imageUrl}`;
-                          }
-                          return imageUrl;
-                        })()}
+                        src={getProfileImageUrl(person.profile_image_url)}
                         alt={person.name}
                         style={{
                           width: '48px',
@@ -3914,16 +3878,7 @@ function Feed({ onLogout }: FeedProps) {
                     {/* Profile Image */}
                     <div style={{ marginRight: '12px', flexShrink: 0 }}>
                       <img
-                        src={(() => {
-                          if (!friend.profile_image_url) return getDefaultProfileImage();
-                          let imageUrl = friend.profile_image_url;
-                          if (imageUrl.startsWith('/storage/')) {
-                            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-                            const baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-                            imageUrl = `${baseUrl}${imageUrl}`;
-                          }
-                          return imageUrl;
-                        })()}
+                        src={getProfileImageUrl(friend.profile_image_url)}
                         alt={friend.name}
                         style={{
                           width: '48px',
