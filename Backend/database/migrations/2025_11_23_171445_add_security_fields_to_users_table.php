@@ -36,13 +36,27 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn([
-                'failed_login_attempts',
-                'locked_until',
-                'last_login_at',
-                'password_reset_token',
-                'password_reset_token_expires_at',
-            ]);
+            $columnsToDrop = [];
+            
+            if (Schema::hasColumn('users', 'failed_login_attempts')) {
+                $columnsToDrop[] = 'failed_login_attempts';
+            }
+            if (Schema::hasColumn('users', 'locked_until')) {
+                $columnsToDrop[] = 'locked_until';
+            }
+            if (Schema::hasColumn('users', 'last_login_at')) {
+                $columnsToDrop[] = 'last_login_at';
+            }
+            if (Schema::hasColumn('users', 'password_reset_token')) {
+                $columnsToDrop[] = 'password_reset_token';
+            }
+            if (Schema::hasColumn('users', 'password_reset_token_expires_at')) {
+                $columnsToDrop[] = 'password_reset_token_expires_at';
+            }
+            
+            if (!empty($columnsToDrop)) {
+                $table->dropColumn($columnsToDrop);
+            }
         });
     }
 };
