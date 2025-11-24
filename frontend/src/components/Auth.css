@@ -1,0 +1,86 @@
+/* Full Page Background for Auth Pages */
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: hidden;
+}
+
+#root {
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  /* Don't create stacking context */
+  transform: none !important;
+}
+
+._social_login_wrapper,
+._social_registration_wrapper,
+._layout_main_wrapper {
+  min-height: 100vh !important;
+  width: 100vw !important;
+  position: relative !important;
+  overflow-x: hidden;
+  
+  margin: 0 !important;
+  z-index: 1;
+  /* Don't create containing block for fixed children */
+  transform: none !important;
+  will-change: auto !important;
+  perspective: none !important;
+  filter: none !important;
+  isolation: auto !important;
+}
+
+._social_login_wrap,
+._social_registration_wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  /* Don't create containing block */
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Background shapes - must be fixed to viewport, not parent */
+._shape_one,
+._shape_two,
+._shape_three {
+  position: fixed !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  /* Ensure they're positioned relative to viewport, not parent */
+  transform: none !important;
+  will-change: auto !important;
+  /* Break out of any containing block */
+  contain: none !important;
+}
+
+._shape_one {
+  top: 0 !important;
+  left: 0 !important;
+  position: fixed !important;
+}
+
+._shape_two {
+  top: 0 !important;
+  right: 20px !important;
+  position: fixed !important;
+}
+
+._shape_three {
+  bottom: 0 !important;
+  right: 327px !important;
+  position: fixed !important;
+}
+
+._shape_img,
+._dark_shape {
+  width: 100%;
+  height: auto;
+}
+

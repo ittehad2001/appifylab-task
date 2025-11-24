@@ -1,0 +1,113 @@
+# Root .gitignore for Monorepo
+# This covers both Backend (Laravel) and frontend (React)
+
+# ============================================
+# Backend (Laravel) - Ignore patterns
+# ============================================
+
+# Laravel
+Backend/vendor/
+Backend/node_modules/
+Backend/.env
+Backend/.env.backup
+Backend/.env.production
+Backend/.phpunit.result.cache
+Backend/Homestead.json
+Backend/Homestead.yaml
+Backend/auth.json
+Backend/npm-debug.log
+Backend/yarn-error.log
+
+# Laravel Storage
+Backend/storage/*.key
+Backend/storage/logs/*
+!Backend/storage/logs/.gitignore
+Backend/storage/framework/cache/*
+!Backend/storage/framework/cache/.gitignore
+Backend/storage/framework/sessions/*
+!Backend/storage/framework/sessions/.gitignore
+Backend/storage/framework/testing/*
+!Backend/storage/framework/testing/.gitignore
+Backend/storage/framework/views/*
+!Backend/storage/framework/views/.gitignore
+Backend/storage/app/public/*
+!Backend/storage/app/public/.gitignore
+
+# Laravel Bootstrap
+Backend/bootstrap/cache/*
+!Backend/bootstrap/cache/.gitignore
+
+# ============================================
+# Frontend (React/Vite) - Ignore patterns
+# ============================================
+
+# Dependencies
+frontend/node_modules/
+frontend/.pnpm-store/
+
+# Build outputs
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# Environment files
+frontend/.env
+frontend/.env.local
+frontend/.env.production.local
+frontend/.env.development.local
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+
+# Editor directories and files
+frontend/.idea/
+frontend/.vscode/
+frontend/*.suo
+frontend/*.ntvs*
+frontend/*.njsproj
+frontend/*.sln
+frontend/*.sw?
+
+# ============================================
+# General - Ignore patterns
+# ============================================
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Deployment
+deploy.sh.bak
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# ============================================
+# Documentation (optional - uncomment if you want to ignore)
+# ============================================
+
+# Uncomment if you don't want to commit deployment docs
+# DEPLOYMENT_*.md
+# *.md.bak
+

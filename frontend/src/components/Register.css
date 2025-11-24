@@ -1,0 +1,44 @@
+/* Registration Form Styles - Left Align */
+._social_registration_content {
+  text-align: left;
+}
+
+._social_registration_form {
+  text-align: left;
+}
+
+._social_registration_form_input {
+  text-align: left;
+}
+
+._social_registration_label {
+  text-align: left !important;
+  display: block;
+}
+
+._social_registration_input {
+  text-align: left !important;
+  border: 1px solid #1890FF !important;
+  border-radius: 6px !important;
+  padding: 12px !important;
+}
+
+._social_registration_input:focus {
+  border-color: #1890FF !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+._social_registration_form_check {
+  text-align: left !important;
+}
+
+._social_registration_form_check_label {
+  text-align: left !important;
+}
+
+._social_registration_form_btn_link {
+  white-space: nowrap !important;
+}
+
+
