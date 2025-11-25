@@ -760,7 +760,7 @@ function Feed({ onLogout }: FeedProps) {
   };
 
   // Fix URL - simple function to handle all image URLs
-  const fixUrl = (url: string | null): string => {
+  const fixUrl = (url: string | null | undefined): string => {
     if (!url) return getDefaultProfileImage();
     if (url.startsWith('http')) return url;
 
