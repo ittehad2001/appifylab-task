@@ -10,8 +10,14 @@ interface FeedProps {
 }
 
 function Feed({ onLogout }: FeedProps) {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('dark_mode') === 'true';
+    }
+    return false;
+  });
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,12 +76,20 @@ function Feed({ onLogout }: FeedProps) {
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Apply dark mode classes on mount if dark mode is enabled
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dark_mode', darkMode ? 'true' : 'false');
+    }
+
+    const layoutElement = document.querySelector('._layout');
     if (darkMode) {
       document.body.classList.add('dark-mode');
-      const layoutElement = document.querySelector('._layout');
       if (layoutElement) {
         layoutElement.classList.add('_dark_wrapper');
+      }
+    } else {
+      document.body.classList.remove('dark-mode');
+      if (layoutElement) {
+        layoutElement.classList.remove('_dark_wrapper');
       }
     }
   }, [darkMode]);
@@ -310,6 +324,13 @@ function Feed({ onLogout }: FeedProps) {
       if (showProfileDropdown && !target.closest('._header_nav_profile')) {
         setShowProfileDropdown(false);
       }
+      if (
+        showMobileProfileMenu &&
+        !target.closest('._mobile_profile_dropdown') &&
+        !target.closest('._header_mobile_profile_toggle')
+      ) {
+        setShowMobileProfileMenu(false);
+      }
       // Close post dropdowns
       Object.keys(showPostDropdown).forEach(postId => {
         if (showPostDropdown[Number(postId)] && !target.closest(`._post_dropdown_wrapper_${postId}`)) {
@@ -322,40 +343,39 @@ function Feed({ onLogout }: FeedProps) {
       }
     };
 
-    if (showProfileDropdown || Object.values(showPostDropdown).some(v => v) || showFriendRequestsDropdown) {
+    if (
+      showProfileDropdown ||
+      showMobileProfileMenu ||
+      Object.values(showPostDropdown).some(v => v) ||
+      showFriendRequestsDropdown
+    ) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showProfileDropdown, showPostDropdown, showFriendRequestsDropdown]);
+  }, [showProfileDropdown, showMobileProfileMenu, showPostDropdown, showFriendRequestsDropdown]);
+
+  const closeAllProfileMenus = () => {
+    setShowProfileDropdown(false);
+    setShowMobileProfileMenu(false);
+  };
 
   const handleLogout = async () => {
+    closeAllProfileMenus();
     await logout();
     onLogout();
   };
 
   const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    
-    // Toggle body class
-    if (newDarkMode) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-    
-    // Toggle _dark_wrapper class for main.css dark mode styles
-    const layoutElement = document.querySelector('._layout');
-    if (layoutElement) {
-      if (newDarkMode) {
-        layoutElement.classList.add('_dark_wrapper');
-      } else {
-        layoutElement.classList.remove('_dark_wrapper');
-      }
-    }
+    setDarkMode(prev => !prev);
+  };
+
+  const openProfilePage = () => {
+    closeAllProfileMenus();
+    setShowProfilePage(true);
+    window.history.pushState({}, '', '/profile');
   };
 
   const toggleProfileDropdown = (e?: React.MouseEvent) => {
@@ -364,6 +384,16 @@ function Feed({ onLogout }: FeedProps) {
       e.stopPropagation();
     }
     setShowProfileDropdown(!showProfileDropdown);
+    setShowMobileProfileMenu(false);
+  };
+
+  const toggleMobileProfileMenu = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setShowMobileProfileMenu(prev => !prev);
+    setShowProfileDropdown(false);
   };
 
   // Handle post button click - create post directly with selected privacy
@@ -964,6 +994,49 @@ function Feed({ onLogout }: FeedProps) {
                           </svg>
                         </a>
                       </form>
+                      <button
+                        type="button"
+                        className={`_header_mobile_dark_toggle ${darkMode ? 'active' : ''}`}
+                        onClick={() => toggleDarkMode()}
+                        aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                      >
+                        <span>{darkMode ? 'Light' : 'Dark'}</span>
+                        {darkMode ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="1.5"/>
+                            <path stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/>
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
+                            <path
+                              d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`_header_mobile_profile_toggle ${showMobileProfileMenu ? 'active' : ''}`}
+                        onClick={toggleMobileProfileMenu}
+                        aria-label="Open profile actions"
+                      >
+                        <div className="_header_mobile_profile_image">
+                          <img
+                            src={fixUrl(currentUser?.profile_image_url || null)}
+                            alt="Profile"
+                            onError={handleImageError}
+                          />
+                        </div>
+                        <span className="_header_mobile_profile_name">{getUserFirstName()}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 10 6" fill="none" className="_header_mobile_profile_arrow">
+                          <path fill="currentColor" d="M5 5l.354.354L5 5.707l-.354-.353L5 5zm4.354-3.646l-4 4-.708-.708 4-4 .708.708zm-4.708 4l-4-4 .708-.708 4 4-.708.708z" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -972,6 +1045,69 @@ function Feed({ onLogout }: FeedProps) {
           </div>
         </div>
       </div>
+
+      {showMobileProfileMenu && (
+        <>
+          <div
+            className="_mobile_profile_backdrop"
+            onClick={() => setShowMobileProfileMenu(false)}
+          />
+          <div className={`_mobile_profile_dropdown ${darkMode ? 'dark' : ''}`}>
+            <div className="_mobile_profile_header">
+              <div className="_mobile_profile_avatar">
+                <img
+                  src={fixUrl(currentUser?.profile_image_url || null)}
+                  alt={currentUser?.name || 'Profile'}
+                  onError={handleImageError}
+                />
+              </div>
+              <div className="_mobile_profile_meta">
+                <h4>{currentUser?.name || 'Your profile'}</h4>
+                <p>{currentUser?.email || 'Stay connected with your friends'}</p>
+              </div>
+              <button
+                type="button"
+                className="_mobile_profile_close"
+                onClick={() => setShowMobileProfileMenu(false)}
+                aria-label="Close profile menu"
+              >
+                ×
+              </button>
+            </div>
+            <button
+              type="button"
+              className="_mobile_profile_action"
+              onClick={openProfilePage}
+            >
+              <span>View Profile</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="_mobile_profile_action"
+              onClick={() => toggleDarkMode()}
+            >
+              <span>{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+              <div className={`_mobile_profile_mode_chip ${darkMode ? 'active' : ''}`}>
+                {darkMode ? 'Light' : 'Dark'}
+              </div>
+            </button>
+            <button
+              type="button"
+              className="_mobile_profile_action _danger"
+              onClick={handleLogout}
+            >
+              <span>Logout</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Dark Mode Toggle Button */}
       <div className="_layout_mode_swithing_btn">
@@ -1148,9 +1284,7 @@ function Feed({ onLogout }: FeedProps) {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setShowProfileDropdown(false);
-                            setShowProfilePage(true);
-                            window.history.pushState({}, '', '/profile');
+                            openProfilePage();
                           }}
                         >
                           <div className="_nav_drop_info">
@@ -1171,7 +1305,6 @@ function Feed({ onLogout }: FeedProps) {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setShowProfileDropdown(false);
                             handleLogout();
                           }}
                         >
