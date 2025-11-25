@@ -155,6 +155,16 @@ class User extends Authenticatable
             return null;
         }
         
-        return url('storage/' . $this->profile_image);
+        // Ensure we always return a full URL
+        $path = 'storage/' . ltrim($this->profile_image, '/');
+        $url = url($path);
+        
+        // If url() returns a relative path (starts with /), prepend APP_URL
+        if (str_starts_with($url, '/')) {
+            $appUrl = rtrim(config('app.url'), '/');
+            return $appUrl . $url;
+        }
+        
+        return $url;
     }
 }
