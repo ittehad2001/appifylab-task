@@ -80,6 +80,6 @@ class Comment extends Model
             return null;
         }
         
-        return Storage::url($this->image);
+        return url('storage/' . $this->image);
     }
 }

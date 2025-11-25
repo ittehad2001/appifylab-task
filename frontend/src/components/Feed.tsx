@@ -440,9 +440,9 @@ function Feed({ onLogout }: FeedProps) {
     setEditPostContent(post.content || '');
     setEditPostImage(null);
     setRemoveEditImage(false);
-    // Use getImageUrl to get the full URL for preview
-    const imageUrl = getImageUrl(post.image, post.image_url);
-    setEditPostImagePreview(imageUrl || null);
+    // Use fixUrl to get the full URL for preview
+    const imageUrl = post.image_url ? fixUrl(post.image_url) : (post.image ? fixUrl(post.image) : null);
+    setEditPostImagePreview(imageUrl);
     setEditPostPrivacy(post.privacy);
     setShowPostDropdown(prev => ({ ...prev, [post.id]: false }));
   };
@@ -477,7 +477,7 @@ function Feed({ onLogout }: FeedProps) {
       const updatedPost = result.post;
       
       // Get proper image URL
-      const imageUrl = getImageUrl(updatedPost.image, updatedPost.image_url);
+      const imageUrl = updatedPost.image_url ? fixUrl(updatedPost.image_url) : (updatedPost.image ? fixUrl(updatedPost.image) : null);
       
       // Update post in state with all fields from backend response
       setPosts(prevPosts => prevPosts.map(post => {
@@ -485,7 +485,7 @@ function Feed({ onLogout }: FeedProps) {
           // Use the complete updated post from backend
           return {
             ...updatedPost,
-            image_url: imageUrl || null,
+            image_url: imageUrl,
           };
         }
         return post;
@@ -754,131 +754,18 @@ function Feed({ onLogout }: FeedProps) {
     return `${Math.floor(diffInSeconds / 86400)} day${Math.floor(diffInSeconds / 86400) !== 1 ? 's' : ''} ago`;
   };
 
-  // Get base URL helper - handles both development and production
-  const getBaseUrl = (): string => {
-    try {
-      // Check if window is available (client-side)
-      if (typeof window === 'undefined') {
-        // Fallback for SSR or initial render - check if we're in production build
-        if (import.meta.env.PROD) {
-          return 'https://api.airoxdev.com';
-        }
-        return 'http://localhost:8000';
-      }
-      
-      // Detect production environment based on hostname and build mode
-      const hostname = window.location?.hostname || 'localhost';
-      const isLocalhost = hostname === 'localhost' || 
-                         hostname === '127.0.0.1' ||
-                         hostname.includes('localhost') ||
-                         hostname.includes('127.0.0.1');
-      
-      // Check if we're in production build mode
-      const isProductionBuild = import.meta.env.PROD;
-      
-      // In production (not localhost OR production build), always use production API URL
-      if (!isLocalhost || isProductionBuild) {
-        // Double check: if hostname is airoxdev.com or similar production domain, use production API
-        if (hostname.includes('airoxdev.com') || hostname.includes('www.airoxdev.com')) {
-          return 'https://api.airoxdev.com';
-        }
-        // If it's a production build but running on localhost (testing), still use production API
-        if (isProductionBuild) {
-          return 'https://api.airoxdev.com';
-        }
-        // If not localhost and not production domain, assume production
-        if (!isLocalhost) {
-          return 'https://api.airoxdev.com';
-        }
-      }
-      
-      // In development (localhost), use environment variable or default to localhost
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-      let baseUrl = apiBaseUrl.replace('/api', '').replace(/\/$/, '');
-      
-      // Ensure we have a valid base URL
-      if (!baseUrl || baseUrl === '') {
-        baseUrl = 'http://localhost:8000';
-      }
-      
-      return baseUrl;
-    } catch (error) {
-      // Fallback: if in production build, use production API, otherwise localhost
-      if (import.meta.env.PROD) {
-        return 'https://api.airoxdev.com';
-      }
-      console.warn('Error determining base URL, using localhost fallback:', error);
-      return 'http://localhost:8000';
-    }
+  // Get default profile image
+  const getDefaultProfileImage = () => {
+    return '/user.png';
   };
 
-  // Get image URL for posts
-  const getImageUrl = (imagePath: string | null, imageUrl?: string | null): string | undefined => {
-    if (!imagePath && !imageUrl) return undefined;
+  // Fix URL - simple function to handle all image URLs
+  const fixUrl = (url: string | null): string => {
+    if (!url) return getDefaultProfileImage();
+    if (url.startsWith('http')) return url;
 
-    const baseUrl = getBaseUrl();
-
-    // If backend gives full URL
-    if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
-      return imageUrl;
-    }
-
-    // If backend gives "/storage/xxxx.jpg"
-    if (imageUrl && imageUrl.startsWith("/")) {
-      return `${baseUrl}${imageUrl}`;
-    }
-
-    // Handle "posts/xxxx.jpg" or relative paths
-    if (imagePath) {
-      let clean = imagePath.replace("public/", "").replace("storage/", "");
-      // Ensure clean path starts with / if it doesn't
-      if (!clean.startsWith("/")) {
-        clean = `/${clean}`;
-      }
-      return `${baseUrl}/storage${clean}`;
-    }
-
-    return undefined;
-  };
-
-  // Get profile image URL - handles all URL formats
-  const getProfileImageUrl = (profileImageUrl: string | null | undefined): string => {
-    // Return default if no URL provided
-    if (!profileImageUrl || (typeof profileImageUrl === 'string' && profileImageUrl.trim() === '')) {
-      return getDefaultProfileImage();
-    }
-
-    // Ensure it's a string
-    const imageUrl = String(profileImageUrl).trim();
-
-    // If already a full URL (http/https), use it as-is
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      return imageUrl;
-    }
-
-    const baseUrl = getBaseUrl();
-
-    // Handle "/storage/..." paths
-    if (imageUrl.startsWith('/storage/')) {
-      return `${baseUrl}${imageUrl}`;
-    }
-
-    // Handle other paths starting with "/"
-    if (imageUrl.startsWith('/')) {
-      // If it starts with / but not /storage/, assume it's a storage path
-      if (!imageUrl.startsWith('/storage')) {
-        return `${baseUrl}/storage${imageUrl}`;
-      }
-      return `${baseUrl}${imageUrl}`;
-    }
-
-    // Handle paths like "profiles/xxx.jpg" or "storage/profiles/xxx.jpg"
-    let cleanPath = imageUrl.replace('public/', '').replace('storage/', '');
-    if (!cleanPath.startsWith('/')) {
-      cleanPath = `/${cleanPath}`;
-    }
-    
-    return `${baseUrl}/storage${cleanPath}`;
+    const apiBase = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8000';
+    return `${apiBase}/storage/${url.replace('public/', '').replace('storage/', '')}`;
   };
 
 
@@ -936,11 +823,6 @@ function Feed({ onLogout }: FeedProps) {
     if (!currentUser?.name) return 'User';
     const nameParts = currentUser.name.trim().split(' ');
     return nameParts[0] || 'User';
-  };
-
-  // Get default profile image
-  const getDefaultProfileImage = () => {
-    return '/user.png';
   };
 
   // Handle image error - fallback to default profile image
@@ -1123,7 +1005,7 @@ function Feed({ onLogout }: FeedProps) {
                             <div key={request.id} className="_friend_request_item">
                               <div className="_friend_request_user">
                                 <img 
-                                  src={getProfileImageUrl(request.sender.profile_image_url)} 
+                                  src={fixUrl(request.sender.profile_image_url)} 
                                   alt={request.sender.name} 
                                   className="_friend_request_avatar"
                                   onError={handleImageError}
@@ -1170,7 +1052,7 @@ function Feed({ onLogout }: FeedProps) {
               <div className="_header_nav_profile">
                 <div className="_header_nav_profile_image">
                   <img 
-                    src={getProfileImageUrl(currentUser?.profile_image_url)} 
+                    src={fixUrl(currentUser?.profile_image_url || null)} 
                     alt="Profile" 
                     className="_nav_profile_img"
                     onError={handleImageError}
@@ -1371,7 +1253,7 @@ function Feed({ onLogout }: FeedProps) {
                               <div className="_left_inner_area_suggest_info_image">
                                 <a href="#0">
                                   <img 
-                                    src={getProfileImageUrl(person.profile_image_url)}
+                                    src={fixUrl(person.profile_image_url)}
                                     alt={person.name} 
                                     className="_info_img" 
                                     onError={handleImageError}
@@ -1641,7 +1523,7 @@ function Feed({ onLogout }: FeedProps) {
                       <div className="_feed_inner_text_area_box">
                         <div className="_feed_inner_text_area_box_image">                                                         
   <img
-    src={getProfileImageUrl(currentUser?.profile_image_url)}
+    src={fixUrl(currentUser?.profile_image_url || null)}
     alt="Profile"
     className="_txt_img"
     onError={handleImageError}
@@ -1854,7 +1736,7 @@ function Feed({ onLogout }: FeedProps) {
                           <div className="_feed_inner_timeline_post_box">
                             <div className="_feed_inner_timeline_post_box_image">
                               <img 
-                                src={getProfileImageUrl((post.user as any).profile_image_url)} 
+                                src={fixUrl((post.user as any).profile_image_url)} 
                                 alt={post.user.name} 
                                 className="_post_img"
                                 onError={handleImageError}
@@ -1983,10 +1865,10 @@ function Feed({ onLogout }: FeedProps) {
                             {post.content && (
                               <h4 className="_feed_inner_timeline_post_title">{post.content}</h4>
                             )}
-                            {(post.image || post.image_url) && getImageUrl(post.image, post.image_url) && (
+                            {(post.image || post.image_url) && (
                               <div className="_feed_inner_timeline_image">
                                 <img 
-                                  src={getImageUrl(post.image, post.image_url)!} 
+                                  src={post.image_url ? fixUrl(post.image_url) : (post.image ? fixUrl(post.image) : '')} 
                                   alt="Post" 
                                   className="_time_img"
                                   onError={handlePostImageError}
@@ -2015,7 +1897,7 @@ function Feed({ onLogout }: FeedProps) {
                                 {post.likes.slice(0, 5).map((like, index) => (
                                   <img 
                                     key={like.id}
-                                    src={getProfileImageUrl((like.user as any).profile_image_url)} 
+                                    src={fixUrl((like.user as any).profile_image_url)} 
                                     alt={like.user.name} 
                                     className={index === 0 ? "_react_img1" : index < 3 ? "_react_img" : "_react_img _rect_img_mbl_none"}
                                     onError={handleImageError}
@@ -2287,7 +2169,7 @@ function Feed({ onLogout }: FeedProps) {
                             <div className="_feed_inner_comment_box_content">
                               <div className="_feed_inner_comment_box_content_image">
                                 <img 
-                                  src={getProfileImageUrl(currentUser?.profile_image_url)} 
+                                  src={fixUrl(currentUser?.profile_image_url || null)} 
                                   alt="Comment" 
                                   className="_comment_img"
                                   onError={handleImageError}
@@ -2362,7 +2244,7 @@ function Feed({ onLogout }: FeedProps) {
                                     <div className="_comment_image">
                                       <a href="#0" className="_comment_image_link">
                                         <img 
-                                          src={getProfileImageUrl((comment.user as any).profile_image_url)} 
+                                          src={fixUrl((comment.user as any).profile_image_url)} 
                                           alt={comment.user.name} 
                                           className="_comment_img1"
                                           onError={handleImageError}
@@ -2590,7 +2472,7 @@ function Feed({ onLogout }: FeedProps) {
                                             <div className="_feed_inner_comment_box_content">
                                               <div className="_feed_inner_comment_box_content_image">
                                                 <img 
-                                                  src={getProfileImageUrl(currentUser?.profile_image_url)} 
+                                                  src={fixUrl(currentUser?.profile_image_url || null)} 
                                                   alt="Comment" 
                                                   className="_comment_img"
                                                   onError={handleImageError}
@@ -2649,7 +2531,7 @@ function Feed({ onLogout }: FeedProps) {
                                               <div className="_comment_main">
                                                 <div className="_comment_image">
                                                   <img 
-                                                    src={getProfileImageUrl((reply.user as any).profile_image_url)} 
+                                                    src={fixUrl((reply.user as any).profile_image_url)} 
                                                     alt={reply.user.name} 
                                                     className="_comment_img1"
                                                     onError={handleImageError}
@@ -2874,7 +2756,7 @@ function Feed({ onLogout }: FeedProps) {
                                                         <div className="_feed_inner_comment_box_content">
                                                           <div className="_feed_inner_comment_box_content_image">
                                                             <img 
-                                                              src={getProfileImageUrl(currentUser?.profile_image_url)} 
+                                                              src={fixUrl(currentUser?.profile_image_url || null)} 
                                                               alt="Reply" 
                                                               className="_comment_img"
                                                               onError={handleImageError}
@@ -3027,7 +2909,7 @@ function Feed({ onLogout }: FeedProps) {
                                 <div className="_feed_right_inner_area_card_ppl_image">
                                   <a href="#0">
                                     <img 
-                                      src={getProfileImageUrl(friend.profile_image_url)}
+                                      src={fixUrl(friend.profile_image_url)}
                                       alt={friend.name} 
                                       className="_box_ppl_img" 
                                       onError={handleImageError}
@@ -3535,7 +3417,7 @@ function Feed({ onLogout }: FeedProps) {
                       {/* Profile Image */}
                       <div style={{ marginRight: '12px' }}>
                         <img
-                          src={getProfileImageUrl((like.user as any).profile_image_url)}
+                          src={fixUrl((like.user as any).profile_image_url)}
                           alt={like.user.name}
                           style={{
                             width: '40px',
@@ -3712,7 +3594,7 @@ function Feed({ onLogout }: FeedProps) {
                     {/* Profile Image */}
                     <div style={{ marginRight: '12px' }}>
                       <img
-                        src={getProfileImageUrl(person.profile_image_url)}
+                        src={fixUrl(person.profile_image_url)}
                         alt={person.name}
                         style={{
                           width: '48px',
@@ -3890,7 +3772,7 @@ function Feed({ onLogout }: FeedProps) {
                     {/* Profile Image */}
                     <div style={{ marginRight: '12px', flexShrink: 0 }}>
                       <img
-                        src={getProfileImageUrl(friend.profile_image_url)}
+                        src={fixUrl(friend.profile_image_url)}
                         alt={friend.name}
                         style={{
                           width: '48px',
