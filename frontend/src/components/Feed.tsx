@@ -769,44 +769,58 @@ function Feed({ onLogout }: FeedProps) {
     }
 
     // Get API base URL - handle production and development
-    let apiBase = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
+    let apiBase = import.meta.env.VITE_API_BASE_URL?.replace('/api', '').replace(/\/$/, '') || '';
     
-    // If no API base URL in env, detect from current location or use production default
-    if (!apiBase) {
-      if (typeof window !== 'undefined') {
-        const hostname = window.location.hostname;
-        // If on production domain, use production API
-        if (hostname.includes('airoxdev.com') || hostname.includes('www.airoxdev.com')) {
-          apiBase = 'https://api.airoxdev.com';
-        } else {
-          apiBase = 'http://localhost:8000';
-        }
-      } else {
-        // SSR or build time - use production as default
+    // If no API base URL in env, detect from current location
+    if (!apiBase && typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const protocol = window.location.protocol;
+      
+      // If on production domain, use production API
+      if (hostname.includes('airoxdev.com') || hostname.includes('www.airoxdev.com')) {
         apiBase = 'https://api.airoxdev.com';
+      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        apiBase = 'http://localhost:8000';
+      } else {
+        // For other domains, try to construct from current origin
+        apiBase = `${protocol}//${hostname}${hostname.includes(':') ? '' : ':8000'}`;
       }
+    } else if (!apiBase) {
+      // SSR or build time - use production as default
+      apiBase = 'https://api.airoxdev.com';
     }
 
-    // Clean the URL path - remove any existing prefixes
+    // Clean the URL path
     let cleanPath = url.trim();
     
-    // Remove 'public/' or 'storage/' if present at the start
-    cleanPath = cleanPath.replace(/^(public\/|storage\/)/, '');
-    
-    // If path already starts with /storage/, use it directly
+    // If path already starts with /storage/, use it directly with API base
     if (cleanPath.startsWith('/storage/')) {
-      return `${apiBase}${cleanPath}`;
+      const finalUrl = `${apiBase}${cleanPath}`;
+      // Debug logging in development
+      if (import.meta.env.DEV && !finalUrl.includes('localhost')) {
+        console.log('[fixUrl] Constructed URL:', { original: url, final: finalUrl, apiBase });
+      }
+      return finalUrl;
     }
     
     // If path starts with / but not /storage/, prepend /storage
     if (cleanPath.startsWith('/')) {
-      // Remove leading slash, add /storage/ prefix
-      cleanPath = cleanPath.substring(1);
-      return `${apiBase}/storage/${cleanPath}`;
+      const finalUrl = `${apiBase}/storage${cleanPath}`;
+      if (import.meta.env.DEV && !finalUrl.includes('localhost')) {
+        console.log('[fixUrl] Constructed URL with /storage prefix:', { original: url, final: finalUrl, apiBase });
+      }
+      return finalUrl;
     }
     
-    // Otherwise, add /storage/ prefix (handles paths like "profiles/xyz.jpg")
-    return `${apiBase}/storage/${cleanPath}`;
+    // Remove 'public/' or 'storage/' if present at the start (without leading slash)
+    cleanPath = cleanPath.replace(/^(public\/|storage\/)/, '');
+    
+    // Add /storage/ prefix (handles paths like "profiles/xyz.jpg")
+    const finalUrl = `${apiBase}/storage/${cleanPath}`;
+    if (import.meta.env.DEV && !finalUrl.includes('localhost')) {
+      console.log('[fixUrl] Constructed URL from relative path:', { original: url, final: finalUrl, apiBase });
+    }
+    return finalUrl;
   };
 
 
