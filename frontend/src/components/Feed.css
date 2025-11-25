@@ -162,25 +162,26 @@
 }
 
 ._header_mobile_profile_toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   border: none;
   background: #fff;
-  padding: 4px 10px;
+  padding: 4px;
   border-radius: 999px;
-  font-weight: 600;
-  color: #112032;
+  width: 46px;
+  height: 46px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 ._header_mobile_profile_toggle.active {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  background: #f5f6fb;
 }
 
 ._header_mobile_profile_image {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -191,19 +192,6 @@
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
-}
-
-._header_mobile_profile_name {
-  font-size: 13px;
-  text-transform: capitalize;
-}
-
-._header_mobile_profile_arrow {
-  transition: transform 0.2s ease;
-}
-
-._header_mobile_profile_toggle.active ._header_mobile_profile_arrow {
-  transform: rotate(180deg);
 }
 
 ._mobile_profile_backdrop {

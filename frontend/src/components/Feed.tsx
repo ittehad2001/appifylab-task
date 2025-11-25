@@ -1032,10 +1032,6 @@ function Feed({ onLogout }: FeedProps) {
                             onError={handleImageError}
                           />
                         </div>
-                        <span className="_header_mobile_profile_name">{getUserFirstName()}</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 10 6" fill="none" className="_header_mobile_profile_arrow">
-                          <path fill="currentColor" d="M5 5l.354.354L5 5.707l-.354-.353L5 5zm4.354-3.646l-4 4-.708-.708 4-4 .708.708zm-4.708 4l-4-4 .708-.708 4 4-.708.708z" />
-                        </svg>
                       </button>
                     </div>
                   </div>
