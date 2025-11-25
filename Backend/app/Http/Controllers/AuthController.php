@@ -85,8 +85,19 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
+        if (!$user) {
+            Log::warning('Login attempt for non-existent account', [
+                'email' => $request->email,
+                'ip_address' => $request->ip(),
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => ['No account found with this email. Please sign up first.'],
+            ]);
+        }
+
         // Check if account is locked
-        if ($user && $user->locked_until && $user->locked_until->isFuture()) {
+        if ($user->locked_until && $user->locked_until->isFuture()) {
             $remainingMinutes = now()->diffInMinutes($user->locked_until);
             throw ValidationException::withMessages([
                 'email' => ["Account is locked. Please try again in {$remainingMinutes} minutes."],
@@ -94,37 +105,36 @@ class AuthController extends Controller
         }
 
         // Check credentials
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            if ($user) {
-                // Increment failed login attempts
-                $user->increment('failed_login_attempts');
-                
-                // Lock account if max attempts reached
-                if ($user->failed_login_attempts >= self::MAX_LOGIN_ATTEMPTS) {
-                    $user->update([
-                        'locked_until' => now()->addMinutes(self::LOCKOUT_DURATION),
-                    ]);
-                    
-                    Log::warning('Account locked due to failed login attempts', [
-                        'user_id' => $user->id,
-                        'email' => $user->email,
-                        'ip_address' => $request->ip(),
-                        'failed_attempts' => $user->failed_login_attempts,
-                    ]);
-                    
-                    throw ValidationException::withMessages([
-                        'email' => ['Account has been locked due to multiple failed login attempts. Please try again in ' . self::LOCKOUT_DURATION . ' minutes.'],
-                    ]);
-                }
-            }
+        if (!Hash::check($request->password, $user->password)) {
+            // Increment failed login attempts
+            $user->increment('failed_login_attempts');
             
+            // Lock account if max attempts reached
+            if ($user->failed_login_attempts >= self::MAX_LOGIN_ATTEMPTS) {
+                $user->update([
+                    'locked_until' => now()->addMinutes(self::LOCKOUT_DURATION),
+                ]);
+                
+                Log::warning('Account locked due to failed login attempts', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'ip_address' => $request->ip(),
+                    'failed_attempts' => $user->failed_login_attempts,
+                ]);
+                
+                throw ValidationException::withMessages([
+                    'email' => ['Account has been locked due to multiple failed login attempts. Please try again in ' . self::LOCKOUT_DURATION . ' minutes.'],
+                ]);
+            }
+
             Log::warning('Failed login attempt', [
-                'email' => $request->email,
+                'email' => $user->email,
+                'user_id' => $user->id,
                 'ip_address' => $request->ip(),
             ]);
             
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'password' => ['Incorrect password. Please try again.'],
             ]);
         }
 

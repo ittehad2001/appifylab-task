@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { register, type RegisterData } from '../services/authService';
 import axios, { type AxiosError } from 'axios';
 import './Register.css';
@@ -22,6 +22,14 @@ function Register({ onSuccess, onSwitchToLogin }: RegisterProps) {
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
+  const errorRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      errorRef.current.focus({ preventScroll: true });
+    }
+  }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +174,24 @@ function Register({ onSuccess, onSwitchToLogin }: RegisterProps) {
                 </div>
                 
                 <form className="_social_registration_form" onSubmit={handleSubmit}>
-                  {error && <div className="error-message" style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(255, 107, 107, 0.2)', border: '1px solid #ff6b6b', color: '#ff6b6b', borderRadius: '4px', fontSize: '0.9em' }}>{error}</div>}
+                  {error && (
+                    <div
+                      ref={errorRef}
+                      tabIndex={-1}
+                      className="error-message"
+                      style={{
+                        marginBottom: '1rem',
+                        padding: '0.75rem',
+                        background: 'rgba(255, 107, 107, 0.2)',
+                        border: '1px solid #ff6b6b',
+                        color: '#ff6b6b',
+                        borderRadius: '4px',
+                        fontSize: '0.9em',
+                      }}
+                    >
+                      {error}
+                    </div>
+                  )}
                   <div className="row">
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                       <div className="_social_registration_form_input _mar_b14">
