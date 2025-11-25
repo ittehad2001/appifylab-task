@@ -93,10 +93,9 @@ class ProfileController extends Controller
         $user->refresh();
         
         // Return user with profile image URL
+        // Note: profile_image_url is already included via the User model's appends attribute
+        // which uses url('storage/' . $this->profile_image) for consistency
         $userData = $user->toArray();
-        $userData['profile_image_url'] = $user->profile_image 
-            ? Storage::url($user->profile_image) 
-            : null;
 
         return response()->json([
             'message' => 'Profile updated successfully',

@@ -762,10 +762,51 @@ function Feed({ onLogout }: FeedProps) {
   // Fix URL - simple function to handle all image URLs
   const fixUrl = (url: string | null | undefined): string => {
     if (!url) return getDefaultProfileImage();
-    if (url.startsWith('http')) return url;
+    
+    // If already a full URL (http/https), return as-is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
 
-    const apiBase = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8000';
-    return `${apiBase}/storage/${url.replace('public/', '').replace('storage/', '')}`;
+    // Get API base URL - handle production and development
+    let apiBase = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
+    
+    // If no API base URL in env, detect from current location or use production default
+    if (!apiBase) {
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        // If on production domain, use production API
+        if (hostname.includes('airoxdev.com') || hostname.includes('www.airoxdev.com')) {
+          apiBase = 'https://api.airoxdev.com';
+        } else {
+          apiBase = 'http://localhost:8000';
+        }
+      } else {
+        // SSR or build time - use production as default
+        apiBase = 'https://api.airoxdev.com';
+      }
+    }
+
+    // Clean the URL path - remove any existing prefixes
+    let cleanPath = url.trim();
+    
+    // Remove 'public/' or 'storage/' if present at the start
+    cleanPath = cleanPath.replace(/^(public\/|storage\/)/, '');
+    
+    // If path already starts with /storage/, use it directly
+    if (cleanPath.startsWith('/storage/')) {
+      return `${apiBase}${cleanPath}`;
+    }
+    
+    // If path starts with / but not /storage/, prepend /storage
+    if (cleanPath.startsWith('/')) {
+      // Remove leading slash, add /storage/ prefix
+      cleanPath = cleanPath.substring(1);
+      return `${apiBase}/storage/${cleanPath}`;
+    }
+    
+    // Otherwise, add /storage/ prefix (handles paths like "profiles/xyz.jpg")
+    return `${apiBase}/storage/${cleanPath}`;
   };
 
 
