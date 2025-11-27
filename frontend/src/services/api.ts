@@ -1,10 +1,14 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { API_BASE_URL } from '../config/api';
+import { getApiBaseUrl } from '../config/api';
+
+// Get API base URL dynamically at runtime
+const getBaseUrl = () => getApiBaseUrl();
 
 // Create axios instance with default config
+// Note: baseURL will be set dynamically in the request interceptor
 const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -13,14 +17,23 @@ const apiClient: AxiosInstance = axios.create({
   timeout: 30000, // 30 second timeout
 });
 
-// Log API base URL in development for debugging
-if (import.meta.env.DEV) {
-  console.log('[API] Base URL:', API_BASE_URL);
+// Log API base URL for debugging (both dev and production)
+const currentUrl = getBaseUrl();
+if (!(window as any).__API_URL_LOGGED__) {
+  console.log('[API] Base URL:', currentUrl);
+  console.log('[API] Current hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A');
+  (window as any).__API_URL_LOGGED__ = true;
 }
 
-// Request interceptor - Add auth token if available
+// Request interceptor - Add auth token if available and ensure correct base URL
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Ensure baseURL is always current (in case it changed)
+    const currentBaseUrl = getBaseUrl();
+    if (config.baseURL !== currentBaseUrl) {
+      config.baseURL = currentBaseUrl;
+    }
+    
     // Get token from localStorage if available
     const token = localStorage.getItem('auth_token');
     if (token && config.headers) {
@@ -56,6 +69,16 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       }
     } else if (!error.response && (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED')) {
+      // Network/connection error - log for debugging
+      const currentUrl = getBaseUrl();
+      console.error('[API] Connection error:', {
+        code: error.code,
+        message: error.message,
+        baseURL: currentUrl,
+        requestedURL: error.config?.url,
+        hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+      });
+      
       // Network/connection error - retry once
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
       if (originalRequest && !originalRequest._retry) {
