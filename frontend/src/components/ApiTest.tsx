@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import testApiClient from '../services/apiTest';
-import { API_BASE_URL } from '../config/api';
+import { getApiBaseUrl } from '../config/api';
 import type { AxiosError } from 'axios';
 
 function ApiTest() {
@@ -25,15 +25,16 @@ function ApiTest() {
       if (err && typeof err === 'object' && 'isAxiosError' in err) {
         const axiosError = err as AxiosError;
         
+        const currentApiUrl = getApiBaseUrl();
         if (axiosError.code === 'ERR_NETWORK' || axiosError.message === 'Network Error') {
           errorMessage = 'Network Error - Cannot reach the backend server';
-          details = `The frontend cannot connect to: ${API_BASE_URL}/test\n\nPossible causes:\n1. Laravel backend is not running\n2. Backend is running on a different port\n3. CORS configuration issue\n4. Firewall blocking the connection`;
+          details = `The frontend cannot connect to: ${currentApiUrl}/test\n\nPossible causes:\n1. Laravel backend is not running\n2. Backend is running on a different port\n3. CORS configuration issue\n4. Firewall blocking the connection`;
         } else if (axiosError.response) {
           errorMessage = `Server Error: ${axiosError.response.status}`;
           details = `Status: ${axiosError.response.status}\nURL: ${axiosError.config?.url}\nResponse: ${JSON.stringify(axiosError.response.data, null, 2)}`;
         } else if (axiosError.request) {
           errorMessage = 'No response from server';
-          details = `Request was made but no response received.\nURL: ${API_BASE_URL}/test`;
+          details = `Request was made but no response received.\nURL: ${currentApiUrl}/test`;
         } else {
           errorMessage = axiosError.message || 'Unknown error occurred';
         }
@@ -80,10 +81,10 @@ function ApiTest() {
                 <pre>cd Backend && php artisan serve</pre>
               </li>
               <li>Test the API directly in your browser:
-                <pre><a href={`${API_BASE_URL}/test`} target="_blank" rel="noopener noreferrer">{API_BASE_URL}/test</a></pre>
+                <pre><a href={`${getApiBaseUrl()}/test`} target="_blank" rel="noopener noreferrer">{getApiBaseUrl()}/test</a></pre>
               </li>
               <li>Check if the API URL is correct:
-                <pre>Current API URL: {API_BASE_URL}</pre>
+                <pre>Current API URL: {getApiBaseUrl()}</pre>
               </li>
               <li>Verify CORS configuration in <code>Backend/config/cors.php</code></li>
               <li>Check Laravel logs: <code>Backend/storage/logs/laravel.log</code></li>
