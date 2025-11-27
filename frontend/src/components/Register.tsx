@@ -110,8 +110,12 @@ function Register({ onSuccess, onSwitchToLogin }: RegisterProps) {
           }
         } 
         // Network error (no response from server)
-        else if (axiosError.request) {
-          setError('Network error. Please check if the backend server is running at http://localhost:8000');
+        else if (axiosError.code === 'ERR_NETWORK' || axiosError.code === 'ERR_CONNECTION_REFUSED') {
+          setError('Cannot connect to server. Please check your internet connection and ensure the backend is running.');
+        } else if (axiosError.code === 'ECONNABORTED') {
+          setError('Request timed out. Please try again.');
+        } else if (axiosError.request) {
+          setError('Network error. Please check if the backend server is running.');
         } 
         // Request setup error
         else {

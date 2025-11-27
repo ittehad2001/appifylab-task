@@ -50,6 +50,10 @@ function Login({ onSuccess, onSwitchToRegister }: LoginProps) {
           setError('Invalid email or password. Please try again.');
         } else if (axiosError.response?.status === 429) {
           setError('Too many login attempts. Please wait a moment and try again.');
+        } else if (axiosError.code === 'ERR_NETWORK' || axiosError.code === 'ERR_CONNECTION_REFUSED') {
+          setError('Cannot connect to server. Please check your internet connection and ensure the backend is running.');
+        } else if (axiosError.code === 'ECONNABORTED') {
+          setError('Request timed out. Please try again.');
         } else {
           setError('Network error. Please try again.');
         }

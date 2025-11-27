@@ -10,7 +10,13 @@ const apiClient: AxiosInstance = axios.create({
     'Accept': 'application/json',
   },
   withCredentials: false, // Important for Laravel Sanctum
+  timeout: 30000, // 30 second timeout
 });
+
+// Log API base URL in development for debugging
+if (import.meta.env.DEV) {
+  console.log('[API] Base URL:', API_BASE_URL);
+}
 
 // Request interceptor - Add auth token if available
 apiClient.interceptors.request.use(
@@ -38,10 +44,32 @@ apiClient.interceptors.request.use(
 // Response interceptor - Handle errors globally
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
+    // Handle connection errors with retry logic
+    if (!error.response && error.code === 'ECONNABORTED') {
+      // Timeout error
+      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+      if (originalRequest && !originalRequest._retry) {
+        originalRequest._retry = true;
+        // Retry once after 1 second
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return apiClient(originalRequest);
+      }
+    } else if (!error.response && (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED')) {
+      // Network/connection error - retry once
+      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+      if (originalRequest && !originalRequest._retry) {
+        originalRequest._retry = true;
+        // Retry once after 1 second
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return apiClient(originalRequest);
+      }
+    }
+
     if (error.response?.status === 401) {
       // Handle unauthorized - clear token and redirect to login
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_data');
       // You can add redirect logic here if needed
     }
     return Promise.reject(error);
