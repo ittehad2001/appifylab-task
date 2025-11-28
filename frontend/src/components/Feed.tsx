@@ -362,11 +362,23 @@ function Feed({ onLogout }: FeedProps) {
     setShowMobileProfileMenu(false);
   };
 
-  const handleLogout = async () => {
-    closeAllProfileMenus();
+ const handleLogout = async () => {
+  try {
+    // Use the logout function from authService which handles API call and token removal
     await logout();
+
+    // Redirect or update UI
     onLogout();
-  };
+    window.location.href = "/login";
+  } catch (error) {
+    console.error("Logout error:", error);
+
+    // Force local logout anyway (logout function already removes token, but ensure cleanup)
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_data");
+    window.location.href = "/login";
+  }
+};
 
   const toggleDarkMode = () => {
     setDarkMode(prev => !prev);
