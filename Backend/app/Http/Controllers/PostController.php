@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
+    private const FEED_COMMENTS_PREVIEW_LIMIT = 20;
+    private const FEED_REPLIES_PREVIEW_LIMIT = 10;
+
     /**
      * Display a listing of the resource.
      * Get all public posts and user's own private posts, ordered by newest first.
@@ -17,7 +20,9 @@ class PostController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $perPage = $request->get('per_page', 20); // No limit - scalable for millions of posts
+        // Clamp page size to prevent abusive payload sizes.
+        $perPage = (int) $request->get('per_page', 20);
+        $perPage = max(1, min($perPage, 50));
         
         // Optimized query with proper eager loading and limits
         $posts = Post::with([
@@ -49,11 +54,13 @@ class PostController extends Controller
                 $query->where('privacy', 'public')
                     ->orWhere('user_id', $user->id);
             })
-            ->latest('created_at')
-            ->paginate($perPage);
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->cursorPaginate($perPage, ['*'], 'cursor', $request->get('cursor'));
 
         // Get all post IDs for batch queries
-        $postIds = $posts->pluck('id');
+        $postItems = collect($posts->items());
+        $postIds = $postItems->pluck('id');
         
         // Batch load user likes for all posts (single query instead of N queries)
         $userLikes = \App\Models\Like::where('user_id', $user->id)
@@ -70,8 +77,8 @@ class PostController extends Controller
             ->pluck('count', 'likeable_id');
         
         // Batch load comment IDs for batch queries
-        $commentIds = $posts->pluck('comments')->flatten()->pluck('id');
-        $replyIds = $posts->pluck('comments')->flatten()->pluck('replies')->flatten()->pluck('id');
+        $commentIds = $postItems->pluck('comments')->flatten()->pluck('id');
+        $replyIds = $postItems->pluck('comments')->flatten()->pluck('replies')->flatten()->pluck('id');
         $allCommentIds = $commentIds->merge($replyIds);
         
         // Batch load user likes for comments/replies
@@ -102,11 +109,17 @@ class PostController extends Controller
             });
 
         // Transform posts with optimized data
-        $posts->getCollection()->transform(function ($post) use ($user, $userLikes, $likesCounts, $userCommentLikes, $commentLikesCounts, $reactionsByType) {
+        foreach ($posts->items() as $post) {
             $userLike = $userLikes->get($post->id);
             $post->is_liked = $userLike ? true : false;
             $post->current_reaction = $userLike ? $userLike->reaction_type : null;
             $post->likes_count = $likesCounts->get($post->id, 0);
+
+            // Feed endpoint returns a bounded thread preview for performance.
+            $post->setRelation(
+                'comments',
+                $post->comments->take(self::FEED_COMMENTS_PREVIEW_LIMIT)->values()
+            );
             
             // Transform comments with optimized data
             $post->comments->transform(function ($comment) use ($user, $userCommentLikes, $commentLikesCounts, $reactionsByType) {
@@ -117,6 +130,11 @@ class PostController extends Controller
                 
                 // Use pre-calculated reactions
                 $comment->reactions = $reactionsByType->get($comment->id, collect());
+
+                $comment->setRelation(
+                    'replies',
+                    $comment->replies->take(self::FEED_REPLIES_PREVIEW_LIMIT)->values()
+                );
                 
                 // Transform replies
                 $comment->replies->transform(function ($reply) use ($user, $userCommentLikes, $commentLikesCounts, $reactionsByType) {
@@ -130,9 +148,7 @@ class PostController extends Controller
                 
                 return $comment;
             });
-            
-            return $post;
-        });
+        }
 
         return response()->json($posts);
     }

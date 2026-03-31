@@ -27,8 +27,6 @@ Route::get('/test', function () {
 // Authentication routes (no authentication required) - with rate limiting
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1'); // 5 requests per minute
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1'); // 10 requests per minute
-Route::post('/password/reset/request', [AuthController::class, 'requestPasswordReset'])->middleware('throttle:5,1'); // 5 requests per minute
-Route::post('/password/reset', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1'); // 5 requests per minute
 
 // Protected routes - requires authentication with rate limiting
 Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () { // 60 requests per minute for authenticated users

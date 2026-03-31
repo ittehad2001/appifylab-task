@@ -15,6 +15,10 @@ class CommentController extends Controller
     public function index(Request $request, $postId)
     {
         $user = $request->user();
+
+        // Ensure requester can view this post before exposing comments/replies.
+        $post = Post::findOrFail($postId);
+        $this->authorize('view', $post);
         
         // Optimized query with proper eager loading and select clauses
         $comments = Comment::with([

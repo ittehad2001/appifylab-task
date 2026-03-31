@@ -28,6 +28,14 @@ class LikeController extends Controller
         // Verify the likeable exists
         $likeable = $likeableType::findOrFail($likeableId);
 
+        // Enforce visibility/authorization for private content.
+        if ($likeable instanceof Post) {
+            $this->authorize('view', $likeable);
+        } else {
+            $post = Post::findOrFail($likeable->post_id);
+            $this->authorize('view', $post);
+        }
+
         // Check if reaction already exists for this user
         $existingLike = Like::where('user_id', $user->id)
             ->where('likeable_type', $likeableType)
@@ -131,35 +139,49 @@ class LikeController extends Controller
             'likeable_id' => 'required|integer',
         ]);
 
+        $user = $request->user();
         $likeableType = $request->likeable_type === 'post' ? Post::class : Comment::class;
         $likeableId = $request->likeable_id;
+
+        // Enforce visibility/authorization for private content.
+        $likeable = $likeableType::findOrFail($likeableId);
+        if ($likeable instanceof Post) {
+            $this->authorize('view', $likeable);
+        } else {
+            $post = Post::findOrFail($likeable->post_id);
+            $this->authorize('view', $post);
+        }
+
+        $perPage = (int) $request->get('per_page', 50);
+        $perPage = max(1, min($perPage, 100));
 
         // Use database aggregation for count (faster)
         $likesCount = Like::where('likeable_type', $likeableType)
             ->where('likeable_id', $likeableId)
             ->count();
 
-        // Get likes with optimized eager loading (removed limit for scalability)
+        // Paginate likes to avoid very large payloads at scale.
         $likes = Like::where('likeable_type', $likeableType)
             ->where('likeable_id', $likeableId)
-            ->with(['user:id,name,email,profile_image'])
+            ->with(['user:id,name,profile_image'])
             ->latest()
-            ->get();
+            ->paginate($perPage);
 
         return response()->json([
             'likes_count' => $likesCount,
-            'likes' => $likes->map(function ($like) {
+            'likes' => $likes->getCollection()->map(function ($like) {
                 return [
                     'id' => $like->id,
                     'user' => [
                         'id' => $like->user->id,
                         'name' => $like->user->name,
-                        'email' => $like->user->email,
                         'profile_image_url' => $like->user->profile_image_url ?? null,
                     ],
                     'created_at' => $like->created_at,
                 ];
             }),
+            'current_page' => $likes->currentPage(),
+            'last_page' => $likes->lastPage(),
         ]);
     }
 }

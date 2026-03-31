@@ -74,7 +74,17 @@ export interface CreateCommentData {
 }
 
 // Get all posts (newest first)
-export const getPosts = async (page: number = 1): Promise<{ data: Post[]; current_page: number; last_page: number }> => {
+export interface PostsResponse {
+  data: Post[];
+  current_page?: number;
+  last_page?: number;
+  next_cursor?: string | null;
+  next_page_url?: string | null;
+  prev_cursor?: string | null;
+  prev_page_url?: string | null;
+}
+
+export const getPosts = async (page: number = 1): Promise<PostsResponse> => {
   const response = await apiClient.get('/posts', {
     params: { page },
   });

@@ -1,12 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { logout, getCurrentUser } from '../services/authService';
-import { getPosts, createPost, toggleLike, createComment, updatePost, deletePost, type Post } from '../services/postService';
+import { getPosts, getLikes, createPost, toggleLike, createComment, updatePost, deletePost, type Post } from '../services/postService';
 import { getSuggestedPeople, sendFriendRequest, getFriends, getPendingRequests, acceptFriendRequest, rejectFriendRequest, type User as FriendUser, type FriendRequest } from '../services/friendService';
 import Profile from './Profile';
 import './Feed.css';
 
 interface FeedProps {
   onLogout: () => void;
+}
+
+interface LikeDetailUser {
+  id: number;
+  name: string;
+  profile_image_url?: string | null;
+}
+
+interface LikeDetailItem {
+  id: number;
+  user: LikeDetailUser;
+  created_at: string;
 }
 
 function Feed({ onLogout }: FeedProps) {
@@ -64,6 +76,19 @@ function Feed({ onLogout }: FeedProps) {
   const [showFriendRequestsDropdown, setShowFriendRequestsDropdown] = useState(false);
   const [processingRequest, setProcessingRequest] = useState<Record<number, boolean>>({});
   const [showReactionsPopup, setShowReactionsPopup] = useState<number | null>(null);
+  const [likesDetailsModal, setLikesDetailsModal] = useState<{
+    open: boolean;
+    title: string;
+    loading: boolean;
+    likes: LikeDetailItem[];
+    error: string | null;
+  }>({
+    open: false,
+    title: 'Likes',
+    loading: false,
+    likes: [],
+    error: null,
+  });
   const [selectedReactionFilter, setSelectedReactionFilter] = useState<string>('all');
   const [showMoreReactions, setShowMoreReactions] = useState(false);
   const [showAllSuggestedPeople, setShowAllSuggestedPeople] = useState(false);
@@ -701,6 +726,32 @@ function Feed({ onLogout }: FeedProps) {
       }, 1000);
     } catch (error) {
       console.error('Error toggling reply like:', error);
+    }
+  };
+
+  const handleOpenCommentLikes = async (commentId: number, title: string) => {
+    setLikesDetailsModal({
+      open: true,
+      title,
+      loading: true,
+      likes: [],
+      error: null,
+    });
+
+    try {
+      const response = await getLikes('comment', commentId);
+      setLikesDetailsModal(prev => ({
+        ...prev,
+        loading: false,
+        likes: (response.likes || []) as LikeDetailItem[],
+      }));
+    } catch (error) {
+      console.error('Error fetching comment likes:', error);
+      setLikesDetailsModal(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Failed to load likes',
+      }));
     }
   };
 
@@ -2489,7 +2540,14 @@ function Feed({ onLogout }: FeedProps) {
                                               </>
                                             ) : null}
                                           </div>
-                                          <span className="_total">{comment.likes_count}</span>
+                                          <span
+                                            className="_total"
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => handleOpenCommentLikes(comment.id, 'Comment Likes')}
+                                            title="See who liked this comment"
+                                          >
+                                            {comment.likes_count}
+                                          </span>
                                         </div>
                                       )}
                                       <div className="_comment_reply">
@@ -2773,7 +2831,14 @@ function Feed({ onLogout }: FeedProps) {
                                                           </>
                                                         ) : null}
                                                       </div>
-                                                      <span className="_total">{reply.likes_count}</span>
+                                                      <span
+                                                        className="_total"
+                                                        style={{ cursor: 'pointer' }}
+                                                        onClick={() => handleOpenCommentLikes(reply.id, 'Reply Likes')}
+                                                        title="See who liked this reply"
+                                                      >
+                                                        {reply.likes_count}
+                                                      </span>
                                                     </div>
                                                   )}
                                                   <div className="_comment_reply">
@@ -3293,6 +3358,101 @@ function Feed({ onLogout }: FeedProps) {
       )}
 
       {/* Reactions Popup Modal */}
+      {likesDetailsModal.open && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10001,
+          }}
+          onClick={() => setLikesDetailsModal(prev => ({ ...prev, open: false }))}
+        >
+          <div
+            style={{
+              backgroundColor: darkMode ? '#232E42' : '#fff',
+              borderRadius: '8px',
+              width: '440px',
+              maxWidth: '90%',
+              maxHeight: '70vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e4e6eb'}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#fff' : '#000' }}>
+                  {likesDetailsModal.title}
+                </h3>
+                <button
+                  onClick={() => setLikesDetailsModal(prev => ({ ...prev, open: false }))}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '24px',
+                    color: darkMode ? '#fff' : '#000',
+                    cursor: 'pointer',
+                    padding: '0',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
+              {likesDetailsModal.loading && (
+                <p style={{ margin: 0, padding: '16px 20px', color: darkMode ? 'rgba(255,255,255,0.8)' : '#666' }}>
+                  Loading likes...
+                </p>
+              )}
+              {!likesDetailsModal.loading && likesDetailsModal.error && (
+                <p style={{ margin: 0, padding: '16px 20px', color: '#ff6b6b' }}>
+                  {likesDetailsModal.error}
+                </p>
+              )}
+              {!likesDetailsModal.loading && !likesDetailsModal.error && likesDetailsModal.likes.length === 0 && (
+                <p style={{ margin: 0, padding: '16px 20px', color: darkMode ? 'rgba(255,255,255,0.8)' : '#666' }}>
+                  No likes yet.
+                </p>
+              )}
+              {!likesDetailsModal.loading && !likesDetailsModal.error && likesDetailsModal.likes.map((like) => (
+                <div
+                  key={like.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 20px',
+                    borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#f0f2f5'}`,
+                  }}
+                >
+                  <img
+                    src={fixUrl(like.user.profile_image_url || null)}
+                    alt={like.user.name}
+                    style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
+                    onError={handleImageError}
+                  />
+                  <span style={{ color: darkMode ? '#fff' : '#111', fontWeight: 500 }}>{like.user.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showReactionsPopup !== null && (() => {
         const post = posts.find(p => p.id === showReactionsPopup);
         if (!post || !post.likes) return null;
