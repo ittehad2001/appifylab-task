@@ -2235,6 +2235,7 @@
 ._comment_area {
   flex: 1;
   position: relative;
+  min-width: 0;
 }
 
 ._comment_details {
@@ -2246,7 +2247,7 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  max-width: calc(100% - 48px);
+  max-width: 100%;
 }
 
 ._dark_wrapper ._comment_details {
@@ -2350,6 +2351,7 @@
   padding: 0;
   margin: 0;
   font-size: 13px;
+  flex-wrap: wrap;
 }
 
 ._comment_reply_list li {
@@ -3150,6 +3152,7 @@
   ._comment_reply_list {
     font-size: 12px;
     gap: 6px;
+    row-gap: 2px;
   }
 
   /* Sidebars - Hide on Mobile */
@@ -3162,6 +3165,12 @@
   ._layout_main_wrapper {
     width: 100%;
     padding: 0 10px;
+    overflow-x: hidden;
+  }
+
+  ._comment_replies_container {
+    margin-left: 8px !important;
+    margin-top: 8px !important;
   }
 
   ._feed_inner_area {
