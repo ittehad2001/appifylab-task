@@ -3468,6 +3468,49 @@
     padding: 8px 14px;
     font-size: 13px;
   }
+
+  /* Keep comment placeholder on one line in mobile */
+  ._feed_inner_comment_box_content {
+    padding: 6px 10px;
+    min-height: 42px;
+    gap: 10px;
+  }
+
+  ._feed_inner_comment_box_content_txt {
+    min-width: 0;
+  }
+
+  ._comment_textarea {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+
+  ._comment_textarea::placeholder {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  ._feed_inner_comment_box_icon {
+    gap: 4px;
+  }
+
+  ._feed_inner_comment_box_icon_btn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  ._feed_inner_comment_box_icon_btn svg {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 /* Extra Small Mobile Devices */
