@@ -1959,7 +1959,7 @@
     transition:.2s all ease;
 }
 ._feed_inner_timeline_cooment_area {
-    padding:24px 24px 10px;
+    padding:24px 24px 0px;
 }
 ._feed_inner_comment_box {
     background: #F6F6F6;
@@ -5882,7 +5882,7 @@
 
 /*---- Comment Reply css -----*/
 ._timline_comment_main {
-    padding: 24px 2px 10px;
+    padding: 1px 2px 1px;
 }
 ._comment_main {
     display: flex;

@@ -84,3 +84,22 @@ body {
   height: auto;
 }
 
+._social_login_input:-webkit-autofill,
+._social_login_input:-webkit-autofill:hover,
+._social_login_input:-webkit-autofill:focus,
+._social_registration_input:-webkit-autofill,
+._social_registration_input:-webkit-autofill:hover,
+._social_registration_input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #000 !important;
+  caret-color: #000 !important;
+  box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+._social_login_input:autofill,
+._social_registration_input:autofill {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
