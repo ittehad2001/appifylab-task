@@ -3991,18 +3991,11 @@ function Feed({ onLogout }: FeedProps) {
                         fontWeight: '600', 
                         fontSize: '16px', 
                         color: darkMode ? '#fff' : '#000',
-                        marginBottom: '4px',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
                       }}>
                         {person.name}
-                      </div>
-                      <div style={{ 
-                        fontSize: '14px', 
-                        color: darkMode ? 'rgba(255,255,255,0.6)' : '#666',
-                      }}>
-                        {person.email}
                       </div>
                     </div>
 
