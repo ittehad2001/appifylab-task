@@ -269,6 +269,37 @@ function Feed({ onLogout }: FeedProps) {
     fetchPendingRequests();
   }, []);
 
+  // Prevent placeholder links/forms from pushing # or #0 into the URL.
+  useEffect(() => {
+    const handlePlaceholderLinkClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+
+      const anchor = target.closest('a[href="#"], a[href="#0"]') as HTMLAnchorElement | null;
+      if (anchor) {
+        event.preventDefault();
+      }
+    };
+
+    const handlePlaceholderFormSubmit = (event: Event) => {
+      const form = event.target as HTMLFormElement | null;
+      if (!form) return;
+
+      const action = form.getAttribute('action');
+      if (action === '#' || action === '#0') {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener('click', handlePlaceholderLinkClick);
+    document.addEventListener('submit', handlePlaceholderFormSubmit);
+
+    return () => {
+      document.removeEventListener('click', handlePlaceholderLinkClick);
+      document.removeEventListener('submit', handlePlaceholderFormSubmit);
+    };
+  }, []);
+
   // Real-time updates: Poll for post updates with exponential backoff
   useEffect(() => {
     if (!currentUser) return; // Don't poll if not logged in

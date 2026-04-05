@@ -39,6 +39,132 @@
   margin: 0;
 }
 
+/* Not Found Page */
+._notfound_page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #f4f8ff 0%, #eef3fb 100%);
+  overflow: hidden;
+  padding: 24px;
+}
+
+._notfound_gradient {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(24, 144, 255, 0.2) 0%, rgba(24, 144, 255, 0) 70%);
+  top: -160px;
+  right: -140px;
+}
+
+._notfound_card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 20px;
+  border: 1px solid #d9e8ff;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(20, 63, 122, 0.16);
+  padding: 40px 36px;
+  text-align: center;
+}
+
+._notfound_brand {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1890ff;
+  letter-spacing: 0.4px;
+}
+
+._notfound_code {
+  margin: 12px 0 0;
+  font-size: 72px;
+  line-height: 1;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+._notfound_title {
+  margin: 10px 0 0;
+  font-size: 30px;
+  line-height: 1.2;
+  color: #1f2937;
+}
+
+._notfound_text {
+  margin: 12px 0 0;
+  color: #667085;
+  font-size: 16px;
+}
+
+._notfound_actions {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+._notfound_btn_primary,
+._notfound_btn_secondary {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+._notfound_btn_primary {
+  background: #1890ff;
+  color: #ffffff;
+}
+
+._notfound_btn_primary:hover {
+  background: #0a78dd;
+}
+
+._notfound_btn_secondary {
+  background: #ffffff;
+  border-color: #c9ddff;
+  color: #274c77;
+}
+
+._notfound_btn_secondary:hover {
+  background: #f4f8ff;
+}
+
+@media (max-width: 575px) {
+  ._notfound_card {
+    padding: 32px 20px;
+    border-radius: 16px;
+  }
+
+  ._notfound_code {
+    font-size: 58px;
+  }
+
+  ._notfound_title {
+    font-size: 24px;
+  }
+
+  ._notfound_actions {
+    flex-direction: column;
+  }
+
+  ._notfound_btn_primary,
+  ._notfound_btn_secondary {
+    width: 100%;
+  }
+}
+
 /* Button Loading Spinner */
 ._btn_loading_spinner {
   display: inline-block;
